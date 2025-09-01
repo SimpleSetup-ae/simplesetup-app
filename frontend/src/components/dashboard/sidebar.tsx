@@ -11,8 +11,7 @@ import {
   Plane, 
   Calculator, 
   Users, 
-  Settings, 
-  Plus,
+  Settings,
   LogOut,
   FileText
 } from 'lucide-react'
@@ -118,25 +117,41 @@ export default function Sidebar({ className }: SidebarProps) {
 
       {/* Bottom Section - Company Selector and Logout (locked at bottom) */}
       <div className="mt-auto">
-        {/* Company Selector */}
-        <div className="px-4 mb-4">
-          <Select defaultValue="1">
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select company" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{company.name}</span>
-                    <span className="text-xs text-gray-500">
-                      {company.free_zone} • {company.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Company Selector - Text directly on background */}
+        <div className="px-4 mb-6">
+          <div 
+            className="relative rounded-xl p-4"
+            style={{
+              backgroundImage: `url('/images/orange-gradient-bg.svg')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          >
+            {/* Very light wash effect */}
+            <div className="absolute inset-0 bg-white/15 rounded-xl"></div>
+            
+            {/* Content directly on background */}
+            <div className="relative z-10">
+              <Select defaultValue="1">
+                <SelectTrigger className="w-full bg-transparent border-white/40 text-gray-800 hover:border-white/60 transition-all backdrop-blur-sm">
+                  <SelectValue placeholder="Select company" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      <div className="flex flex-col py-1">
+                        <span className="font-medium text-gray-900">{company.name}</span>
+                        <span className="text-xs text-gray-600">
+                          {company.free_zone} • {company.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         {/* Logout Button */}

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Users, UserPlus, Mail, Shield } from 'lucide-react'
+import { Users, UserPlus, Mail, Shield, CheckCircle } from 'lucide-react'
 
 export default function UsersPage() {
   // Mock users data

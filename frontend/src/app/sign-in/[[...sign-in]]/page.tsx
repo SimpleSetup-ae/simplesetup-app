@@ -8,7 +8,7 @@ export default function SignInPage() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full">
+        <Card className="max-w-md w-full">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-extrabold text-gray-900">
             Sign In
@@ -38,7 +38,8 @@ export default function SignInPage() {
             </p>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }
