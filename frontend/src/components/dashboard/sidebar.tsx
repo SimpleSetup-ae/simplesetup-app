@@ -13,7 +13,8 @@ import {
   Users, 
   Settings, 
   Plus,
-  LogOut
+  LogOut,
+  FileText
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -30,6 +31,11 @@ const menuItems = [
     title: 'My Company', 
     href: '/companies',
     icon: Building2
+  },
+  {
+    title: 'Requests',
+    href: '/requests',
+    icon: FileText
   },
   {
     title: 'Visas',
@@ -110,10 +116,10 @@ export default function Sidebar({ className }: SidebarProps) {
 
       <Separator className="mx-4" />
 
-      {/* Company Selector - Moved above logout */}
-      <div className="px-4 mb-6">
-        <div className="space-y-3">
-          <div className="text-sm font-medium text-gray-700">Company</div>
+      {/* Bottom Section - Company Selector and Logout (locked at bottom) */}
+      <div className="mt-auto">
+        {/* Company Selector */}
+        <div className="px-4 mb-4">
           <Select defaultValue="1">
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select company" />
@@ -131,34 +137,22 @@ export default function Sidebar({ className }: SidebarProps) {
               ))}
             </SelectContent>
           </Select>
-          
+        </div>
+
+        {/* Logout Button */}
+        <div className="p-4">
           <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full justify-start gap-2 text-orange-600 border-orange-200 hover:bg-orange-50"
-            asChild
+            variant="ghost" 
+            className="w-full justify-start gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            onClick={() => {
+              // In production, this would call Clerk's signOut
+              alert('Logout functionality - would integrate with Clerk')
+            }}
           >
-            <Link href="/companies/new">
-              <Plus className="h-4 w-4" />
-              Add Company
-            </Link>
+            <LogOut className="h-4 w-4" />
+            Log Out
           </Button>
         </div>
-      </div>
-
-      {/* Bottom Section - Logout */}
-      <div className="p-4">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-          onClick={() => {
-            // In production, this would call Clerk's signOut
-            alert('Logout functionality - would integrate with Clerk')
-          }}
-        >
-          <LogOut className="h-4 w-4" />
-          Log Out
-        </Button>
       </div>
     </div>
   )

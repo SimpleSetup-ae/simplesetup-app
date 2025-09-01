@@ -8,6 +8,8 @@ class Company < ApplicationRecord
   has_many :payments, dependent: :destroy
   has_many :requests, dependent: :destroy
   has_many :tax_registrations, dependent: :destroy
+  has_many :visa_applications, dependent: :destroy
+  has_many :company_invitations, dependent: :destroy
   has_one :billing_account, dependent: :destroy
   
   # Specific person types
