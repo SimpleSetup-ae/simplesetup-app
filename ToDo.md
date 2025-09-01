@@ -85,22 +85,41 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
 - [ ] Setup Google Gemini 2.5 Pro integration
 - [ ] Setup OpenAI GPT-4o integration
 - [ ] Implement document upload flow
-  - [ ] Pre-signed URL generation
+  - [ ] Create drag-and-drop upload component
+    - [ ] Visual drop zone with dashed border
+    - [ ] Drag hover state with gradient highlight
+    - [ ] File preview on drop before upload
+    - [ ] Multiple file selection support
+  - [ ] Add traditional file upload button
+    - [ ] Custom styled button matching design system
+    - [ ] File browser integration
+    - [ ] Batch upload capability
+  - [ ] Configure broad file type support
+    - [ ] Images: JPG, JPEG, PNG, GIF, BMP, WEBP, SVG, HEIC, HEIF
+    - [ ] Documents: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ODT, ODS
+    - [ ] Text: TXT, RTF, CSV
+    - [ ] Archives: ZIP, RAR, 7Z (for bulk uploads)
+    - [ ] Set max file size limits (50MB default, configurable)
+  - [ ] Raw file storage implementation
+    - [ ] Store original uploaded files unchanged
+    - [ ] Generate unique storage keys with timestamps
+    - [ ] Maintain file metadata (original name, MIME type, size)
+    - [ ] Create file versioning system
+  - [ ] Pre-signed URL generation for secure uploads
   - [ ] Virus scanning integration
   - [ ] Supabase Storage configuration
+    - [ ] Create separate buckets for raw and processed files
+    - [ ] Configure bucket policies
 - [ ] Build OCR processing pipeline
-  - [ ] DocumentOcrJob implementation
-  - [ ] Field extraction logic
-  - [ ] Confidence scoring
+  - [ ] DocumentOcrJob implementation (using google Gemini)
+  - [ ] Field extraction logic (by returning json values from gemini)
+  - [ ] Confidence scoring (if needed)
   - [ ] MRZ parsing
+  - [ ] Keep processed versions alongside raw files
 - [ ] Implement PII encryption
-  - [ ] AES-256-GCM encryption
+  - [ ] AES-256-GCM encryption (if needed on supabase)
   - [ ] Per-tenant data keys
   - [ ] Key management system
-- [ ] Create redaction service
-  - [ ] Identify sensitive regions
-  - [ ] Generate redaction JSON
-  - [ ] Apply blur/masking for previews
 
 ### 6. Core API Endpoints
 - [ ] Authentication endpoints
@@ -126,47 +145,101 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
   - [ ] GET /requests
   - [ ] PATCH /requests/:id
 
-### 7. Frontend Foundation (Next.js + shadcn/ui)
+### 7. Design System & Theme Configuration
+- [ ] Create global design system with abstracted theme
+  - [ ] Setup CSS variables for consistent theming
+  - [ ] Configure color palette with gradients
+    - [ ] Text gradients: black to silver (#000000 → #C0C0C0)
+    - [ ] Button gradients: orange to silver (#FFA500 → #C0C0C0)
+    - [ ] Define gradient stops and directions
+  - [ ] Typography configuration
+    - [ ] Merriweather for headings and large text
+    - [ ] Inter for body text and UI elements
+    - [ ] Define font size scale (xs, sm, base, lg, xl, 2xl, 3xl, 4xl)
+    - [ ] Set line heights and letter spacing
+  - [ ] Spacing system (4px base unit)
+  - [ ] Border radius tokens
+  - [ ] Shadow tokens for depth
+- [ ] Configure shadcn/ui theme
+  - [ ] Customize default components for minimalist aesthetic
+  - [ ] Override component styles to match design system
+  - [ ] Create custom variants for buttons, cards, forms
+- [ ] Setup Lucide icons
+  - [ ] Configure icon size tokens
+  - [ ] Create icon color system
+  - [ ] Define consistent icon usage patterns
+- [ ] Build component library
+  - [ ] Typography components (H1-H6, Body, Caption)
+  - [ ] Button variants (primary, secondary, ghost, outline)
+  - [ ] Card components with subtle shadows
+  - [ ] Form elements with consistent styling
+  - [ ] Navigation components
+  - [ ] Status indicators and badges
+- [ ] Create style utilities
+  - [ ] Gradient text utility classes
+  - [ ] Gradient button utility classes
+  - [ ] Animation utilities for micro-interactions
+  - [ ] Responsive utility classes
+
+### 8. Frontend Foundation (Next.js + shadcn/ui)
 - [ ] Setup Next.js 14 with TypeScript
-- [ ] Install and configure shadcn/ui
+- [ ] Install and configure shadcn/ui with custom theme
+- [ ] Import and configure fonts
+  - [ ] Add Merriweather from Google Fonts
+  - [ ] Add Inter from Google Fonts
+  - [ ] Configure font loading optimization
 - [ ] Setup Clerk provider
 - [ ] Configure TanStack Query
 - [ ] Implement Zod schemas
 - [ ] Create layout structure
-  - [ ] Navigation component
-  - [ ] Company selector
-  - [ ] User menu
-- [ ] Build landing page with data capture
-  - [ ] Company details form
-  - [ ] Activity selection
-  - [ ] Contact information
+  - [ ] Navigation component with minimalist design
+  - [ ] Company selector with gradient accents
+  - [ ] User menu with subtle animations
+- [ ] Build very basic placeholder landing page. The data caputure and landing page has been built and in another repo
+  - [ ] Hero section 
+  - [ ] Activity selection with custom dropdowns
+  - [ ] Contact information with validation
   - [ ] Session storage integration
 
-### 8. Core Frontend Screens
+### 9. Core Frontend Screens after login
 - [ ] Dashboard
-  - [ ] Company overview cards
-  - [ ] Progress visualization
-  - [ ] Deadline tracker
-  - [ ] Quick actions
+  - [ ] Company overview cards with gradient borders
+  - [ ] Progress visualization with orange accents
+  - [ ] Deadline tracker with minimalist timeline
+  - [ ] Quick actions with hover gradients
 - [ ] Formation Stepper
   - [ ] YAML-driven form generation
-  - [ ] Dynamic field rendering
-  - [ ] Validation display
-  - [ ] Progress indicator
+  - [ ] Dynamic field rendering with consistent styling
+  - [ ] Validation display with subtle error states
+  - [ ] Progress indicator with gradient fill
 - [ ] Documents Module
-  - [ ] Upload interface with drag-drop
-  - [ ] Document list with status
-  - [ ] OCR results viewer
-  - [ ] Field verification UI
+  - [ ] Upload interface with dual upload methods
+    - [ ] Drag-drop zone with gradient border animation
+    - [ ] Upload button with orange gradient on hover
+    - [ ] Progress bars with gradient fill during upload
+    - [ ] File type icons from Lucide
+  - [ ] Document list with status badges
+    - [ ] Show original filename and upload date
+    - [ ] File size and type indicators
+    - [ ] Processing status (uploaded/processing/completed/failed)
+    - [ ] Download raw file option
+  - [ ] OCR results viewer with confidence indicators
+    - [ ] Side-by-side view (document preview + extracted data)
+    - [ ] Confidence scores with color coding
+    - [ ] Highlight extracted regions on hover
+  - [ ] Field verification UI with inline editing
+    - [ ] Editable fields with validation
+    - [ ] Accept/reject extracted values
+    - [ ] Manual override capability
 - [ ] My Business
-  - [ ] License display
-  - [ ] Company details
-  - [ ] Activity codes
-  - [ ] Shareholder cap table
+  - [ ] License display with download button
+  - [ ] Company details in minimalist cards
+  - [ ] Activity codes with icon representations
+  - [ ] Shareholder cap table with clean grid layout
 
 ## Phase 2: Automation & Payments (Weeks 5-8)
 
-### 9. Playwright Automation Framework
+### 10. Playwright Automation Framework (Icebox this to the end. Make it possible for CSP Administrator to carry things out manually at this stage. Automation is Iceboxed until after MVP)
 - [ ] Setup Node.js worker environment
 - [ ] Create automation runner service
 - [ ] Implement IFZA portal automations
@@ -179,7 +252,7 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
 - [ ] Create logging framework
 - [ ] Setup worker orchestration from Rails
 
-### 10. Stripe Integration
+### 11. Stripe Integration
 - [ ] Configure Stripe account (sandbox mode)
 - [ ] Create product catalog
   - [ ] Formation products (IFZA, DIFC)
@@ -189,19 +262,23 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
   - [ ] POST /billing/:company_id/subscribe
   - [ ] GET /billing/:company_id
   - [ ] POST /webhooks/stripe
-- [ ] Build subscription management
-  - [ ] Plan selection UI
-  - [ ] Tier recommendation logic
-  - [ ] Upgrade/downgrade flow
+- [ ] Build subscription management UI
+  - [ ] Plan selection cards with gradient borders
+  - [ ] Pricing display with Merriweather numbers
+  - [ ] Feature comparison table with Lucide icons
+  - [ ] Tier recommendation logic with highlighted suggestion
+  - [ ] Upgrade/downgrade flow with confirmation modal
 - [ ] Implement one-off payments
-  - [ ] Tax registration orders
-  - [ ] Additional services
+  - [ ] Tax registration orders with orange CTA buttons
+  - [ ] Additional services catalog
+  - [ ] Payment form with minimalist design
 - [ ] Create invoice management
-  - [ ] Invoice generation
-  - [ ] Download functionality
-  - [ ] Payment history
+  - [ ] Invoice list with clean table layout
+  - [ ] Download buttons with gradient hover
+  - [ ] Payment history timeline
+  - [ ] Receipt preview modal
 
-### 11. Tax & VAT Module
+### 12. Tax & VAT Module
 - [ ] Build tax registration tracking
   - [ ] Corporate Tax (CT) status
   - [ ] VAT registration status
@@ -259,7 +336,7 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
 - [ ] Build offline support
 
 ### 16. Notification System
-- [ ] Setup email provider (Postmark/Resend)
+- [ ] Setup email provider (using SendGrid)
 - [ ] Create email templates
   - [ ] Welcome emails
   - [ ] Step completion
@@ -280,7 +357,7 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
 - [ ] Setup 2FA for admin accounts
 - [ ] Configure backup encryption
 
-### 18. Performance Optimization
+### 18. Performance Optimization (this can be iceboxs if any blockers)
 - [ ] Implement caching strategy
   - [ ] Redis caching
   - [ ] CDN setup
@@ -328,10 +405,10 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
   - [ ] PII encryption verification
 
 ### 21. DevOps & Deployment
-- [ ] Setup Heroku deployment
-  - [ ] Configure buildpacks
-  - [ ] Setup environment variables
-  - [ ] Configure add-ons
+- [ ] Setup Heroku deployment (simple-setup-app)
+  - [ ] Configure buildpacks for Rails API
+  - [ ] Setup environment variables in Heroku config
+  - [ ] Configure add-ons (Postgres, Redis, etc.)
 - [ ] Implement CI/CD pipeline
   - [ ] Automated testing
   - [ ] Build verification

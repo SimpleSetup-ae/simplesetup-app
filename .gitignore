@@ -1,54 +1,97 @@
-# Environment variables
+# Environment files
 .env
 .env.local
+.env.development
+.env.production
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Node
+# Dependencies
 node_modules/
+*/node_modules/
+
+# Production builds
+.next/
+*/build/
+*/.next/
+*/dist/
+
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# IDE
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Rails specific
+backend/log/*
+backend/tmp/*
+backend/storage/*
+backend/public/assets
+backend/public/packs
+backend/public/packs-test
+backend/.bundle/
+backend/vendor/bundle
 
-# Logs
-*.log
+# Rails credentials
+backend/config/master.key
+backend/config/credentials.yml.enc
 
+# React Native / Expo
+mobile/.expo/
+mobile/dist/
+mobile/npm-debug.*
+mobile/*.jks
+mobile/*.p8
+mobile/*.p12
+mobile/*.key
+mobile/*.mobileprovision
+mobile/*.orig.*
+mobile/web-build/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database
+*.sqlite3
+*.db
+
+# Secrets
+*.pem
+*.key
+secrets/
+
+# Automation screenshots
+automations/screenshots/
+automations/logs/
+
+# Docker
+.dockerignore
+
+# Terraform (if used later)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Backup files
+*.backup
+*.bak
