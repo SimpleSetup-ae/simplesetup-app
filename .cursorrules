@@ -39,7 +39,66 @@ globs:
    - Reduces technical debt
    - Maintains architectural patterns
 
-## 2. ENVIRONMENT CONFIGURATION
+## 2. GIT BRANCH MANAGEMENT & FEATURE WORKFLOW
+
+**Branch Strategy:**
+- **ALWAYS** create a new branch for each feature/bug fix
+- **NEVER** commit directly to `main` branch
+- Use descriptive branch names following convention: `feature/description` or `fix/description`
+
+**Feature Development Workflow:**
+```bash
+# 1. Start new feature - create and switch to feature branch
+git checkout -b feature/user-authentication
+# or for bug fixes: git checkout -b fix/login-redirect-issue
+
+# 2. Work on feature with regular commits
+git add .
+git commit -m "feat: add user authentication form"
+git commit -m "feat: integrate Clerk auth with Rails API"
+git commit -m "test: add authentication integration tests"
+
+# 3. Push feature branch to GitHub
+git push -u origin feature/user-authentication
+
+# 4. Create Pull Request on GitHub for code review
+# - Add descriptive title and description
+# - Link any related issues
+# - Request review from team members
+
+# 5. After testing and approval, merge via GitHub UI
+# - Use "Squash and merge" for clean history
+# - Delete feature branch after merge
+
+# 6. Update local main branch
+git checkout main
+git pull origin main
+git branch -d feature/user-authentication
+```
+
+**Branch Naming Conventions:**
+- `feature/` - New features (e.g., `feature/payment-integration`)
+- `fix/` - Bug fixes (e.g., `fix/api-timeout-error`)
+- `refactor/` - Code refactoring (e.g., `refactor/auth-middleware`)
+- `docs/` - Documentation updates (e.g., `docs/api-endpoints`)
+- `test/` - Test additions/improvements (e.g., `test/user-registration`)
+
+**Testing Before Merge:**
+- [ ] Frontend builds successfully (`npm run build`)
+- [ ] Backend tests pass (`rails test`)
+- [ ] Integration tests pass
+- [ ] Manual testing completed
+- [ ] Code review approved
+- [ ] No merge conflicts with main
+
+**Merge Requirements:**
+- **MANDATORY**: All tests must pass
+- **MANDATORY**: Code review approval required
+- **MANDATORY**: Feature branch must be up-to-date with main
+- **RECOMMENDED**: Use "Squash and merge" for clean commit history
+- **MANDATORY**: Delete feature branch after successful merge
+
+## 3. ENVIRONMENT CONFIGURATION
 
 **Single .env File Enforcement:**
 - **ONLY** use `.env` in project root
@@ -69,7 +128,8 @@ SECRET_KEY_BASE=your-secret-key
 CORS_ORIGINS=http://localhost:3000,https://your-app.vercel.app
 
 # Heroku Production
-HEROKU_APP_NAME=your-app-name
+HEROKU_APP_NAME=simplesetup-app
+HEROKU_GIT_URL=https://git.heroku.com/simplesetup-app.git
 BUILDPACK_URL=heroku/ruby
 
 # Feature Flags
@@ -77,7 +137,7 @@ FEATURE_ADVANCED_ANALYTICS=false
 FEATURE_NEW_UI=true
 ```
 
-## 3. STANDARDIZED LOCAL SERVER START
+## 4. STANDARDIZED LOCAL SERVER START
 
 **Frontend (Next.js + shadcn/ui):**
 ```json
@@ -106,9 +166,9 @@ gem 'clerk-sdk-ruby'
 2. **Backend**: `bundle install && rails server` (port 3001)
 3. **Database**: Supabase handles hosting, use migrations for schema
 4. **Auth**: Clerk webhooks for user sync to Rails
-5. **Deploy**: `git push heroku main` for Rails API
+5. **Deploy**: Use Heroku CLI for Rails API deployment
 
-## 4. TECH STACK SPECIFIC PATTERNS
+## 5. TECH STACK SPECIFIC PATTERNS
 
 **Frontend (shadcn/ui + Next.js):**
 - Use `components/ui/` for shadcn components
@@ -137,7 +197,7 @@ gem 'clerk-sdk-ruby'
 - Use Clerk's `useUser()` hook in frontend
 - Implement role-based access control
 
-## 5. DATABASE & SUPABASE INTEGRATION
+## 6. DATABASE & SUPABASE INTEGRATION
 
 **Rails Migration Rules:**
 - Create Rails migrations: `rails generate migration AddTableName`
@@ -158,7 +218,7 @@ gem 'clerk-sdk-ruby'
 - Add proper foreign key constraints
 - Consider partitioning for large tables
 
-## 6. SECURITY & CLERK INTEGRATION
+## 7. SECURITY & CLERK INTEGRATION
 
 **Clerk Authentication:**
 - Frontend: Use `@clerk/nextjs` middleware
@@ -184,13 +244,37 @@ gem 'clerk-sdk-ruby'
 - Never log sensitive information
 - Implement proper error handling without exposing internals
 
-## 7. HEROKU DEPLOYMENT & MONITORING
+## 8. HEROKU DEPLOYMENT & MONITORING
 
-**Heroku Setup:**
-- Rails API: Deploy to Heroku with Ruby buildpack
-- Frontend: Deploy to Vercel/Netlify (or Heroku with Node.js)
+**Heroku Repository:** `SimpleSetup-ae/SimpleSetup-app`
+
+**Heroku Setup (Use Heroku CLI):**
+- Rails API: Deploy to `simplesetup-app` with Ruby buildpack
+- Frontend: Deploy to Vercel/Netlify (or separate Heroku app)
 - Configure Heroku Postgres add-on if needed for caching
 - Set up Heroku config vars matching .env structure
+
+**Heroku CLI Commands:**
+```bash
+# Login and connect to app
+heroku login
+heroku git:remote -a simplesetup-app
+
+# Deploy changes
+git push heroku main
+
+# Manage config vars
+heroku config:set VARIABLE_NAME=value -a simplesetup-app
+heroku config -a simplesetup-app
+
+# Database operations
+heroku run rails db:migrate -a simplesetup-app
+heroku run rails console -a simplesetup-app
+
+# Logs and monitoring
+heroku logs --tail -a simplesetup-app
+heroku ps -a simplesetup-app
+```
 
 **Pre-deployment Checklist:**
 - [ ] Audit completed and documented
