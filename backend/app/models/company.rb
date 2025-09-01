@@ -5,7 +5,7 @@ class Company < ApplicationRecord
   has_many :workflow_instances, dependent: :destroy
   has_many :documents, dependent: :destroy
   has_many :people, dependent: :destroy
-  has_many :people, dependent: :destroy
+  has_many :payments, dependent: :destroy
   has_many :requests, dependent: :destroy
   has_many :tax_registrations, dependent: :destroy
   has_one :billing_account, dependent: :destroy

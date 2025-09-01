@@ -287,6 +287,7 @@ GEM
       rack (>= 2.2.4)
       redis-client (>= 0.22.2)
     stringio (3.1.7)
+    stripe (15.5.0)
     thor (1.4.0)
     timeout (0.4.3)
     tzinfo (2.0.6)
@@ -326,6 +327,7 @@ DEPENDENCIES
   redis (~> 5.0)
   rspec-rails
   sidekiq (~> 7.0)
+  stripe
   tzinfo-data
   uuidtools
 

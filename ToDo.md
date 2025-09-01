@@ -287,31 +287,33 @@ Multi-company formation platform with web (Next.js) + mobile (Expo) frontends, R
 - [ ] Create logging framework
 - [ ] Setup worker orchestration from Rails
 
-### 11. Stripe Integration
-- [ ] Configure Stripe account (sandbox mode)
-- [ ] Create product catalog
-  - [ ] Formation products (IFZA, DIFC)
-  - [ ] Tax registration products
-  - [ ] Accounting tier subscriptions
-- [ ] Implement billing endpoints
-  - [ ] POST /billing/:company_id/subscribe
-  - [ ] GET /billing/:company_id
-  - [ ] POST /webhooks/stripe
-- [ ] Build subscription management UI
-  - [ ] Plan selection cards with gradient borders
-  - [ ] Pricing display with Merriweather numbers
-  - [ ] Feature comparison table with Lucide icons
-  - [ ] Tier recommendation logic with highlighted suggestion
-  - [ ] Upgrade/downgrade flow with confirmation modal
-- [ ] Implement one-off payments
-  - [ ] Tax registration orders with orange CTA buttons
-  - [ ] Additional services catalog
-  - [ ] Payment form with minimalist design
-- [ ] Create invoice management
-  - [ ] Invoice list with clean table layout
-  - [ ] Download buttons with gradient hover
-  - [ ] Payment history timeline
-  - [ ] Receipt preview modal
+### 11. Stripe Integration ✅ COMPLETED
+- [x] Configure Stripe account (sandbox mode)
+- [x] Create product catalog
+  - [x] Formation products (IFZA, DIFC)
+  - [x] Tax registration products
+  - [ ] Accounting tier subscriptions (Phase 3)
+- [x] Implement billing endpoints
+  - [x] GET /companies/:id/billing
+  - [x] POST /companies/:id/billing/payment_intent
+  - [x] POST /webhooks/stripe
+- [x] Build subscription management UI
+  - [x] Plan selection cards with gradient borders
+  - [x] Pricing display with fee breakdown
+  - [x] Payment form with Stripe Elements
+  - [ ] Feature comparison table with Lucide icons (Phase 3)
+  - [ ] Tier recommendation logic with highlighted suggestion (Phase 3)
+  - [ ] Upgrade/downgrade flow with confirmation modal (Phase 3)
+- [x] Implement one-off payments
+  - [x] Formation fee processing with orange CTA buttons
+  - [x] Payment form with minimalist design
+  - [ ] Additional services catalog (Phase 3)
+- [x] Create invoice management
+  - [x] Payment history with status indicators
+  - [x] Fee breakdown display
+  - [ ] Invoice list with clean table layout (Phase 3)
+  - [ ] Download buttons with gradient hover (Phase 3)
+  - [ ] Receipt preview modal (Phase 3)
 
 ### 12. Tax & VAT Module
 - [ ] Build tax registration tracking

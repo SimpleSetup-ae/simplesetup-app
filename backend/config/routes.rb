@@ -40,6 +40,17 @@ Rails.application.routes.draw do
       # Users
       resources :users, only: [:show, :update]
       
+      # Billing
+      resources :companies, only: [] do
+        member do
+          get 'billing', to: 'billing#show'
+          post 'billing/payment_intent', to: 'billing#create_payment_intent'
+        end
+      end
+      
+      # Stripe webhooks
+      post '/webhooks/stripe', to: 'billing#webhook'
+      
       # Requests
       resources :requests
     end
