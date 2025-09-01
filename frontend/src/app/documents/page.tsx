@@ -1,13 +1,7 @@
-import { auth } from '@clerk/nextjs'
-import { redirect } from 'next/navigation'
 import DocumentUploadInterface from '@/components/documents/document-upload-interface'
 
+// Temporarily disable auth check for testing  
 export default async function DocumentsPage() {
-  const { userId } = auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">

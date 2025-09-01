@@ -1,15 +1,9 @@
-import { auth } from '@clerk/nextjs'
-import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
+// Temporarily disable auth check for testing
 export default async function CompaniesPage() {
-  const { userId } = auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
 
   // In production, this would fetch companies from the API
   const companies = [

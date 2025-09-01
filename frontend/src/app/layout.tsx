@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter, Merriweather } from 'next/font/google'
-import { ClerkProvider } from '@clerk/nextjs'
 import Navigation from '@/components/navigation'
 import './globals.css'
+
+// Temporarily disable Clerk until proper API keys are configured
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -28,17 +29,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${inter.variable} ${merriweather.variable}`}>
-        <body className={inter.className}>
-          <div className="min-h-screen bg-gray-50">
-            <Navigation />
-            <main>
-              {children}
-            </main>
-          </div>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`${inter.variable} ${merriweather.variable}`}>
+      <body className={inter.className}>
+        <div className="min-h-screen bg-gray-50">
+          <Navigation />
+          <main>
+            {children}
+          </main>
+        </div>
+      </body>
+    </html>
   )
 }

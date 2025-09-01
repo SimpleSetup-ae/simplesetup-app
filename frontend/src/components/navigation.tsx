@@ -1,10 +1,11 @@
 'use client'
 
-import { UserButton, useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 
 export default function Navigation() {
-  const { isSignedIn, user } = useUser()
+  // Temporarily mock authentication state until Clerk is properly configured
+  const isSignedIn = false
+  const user = null
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -37,15 +38,11 @@ export default function Navigation() {
             {isSignedIn ? (
               <div className="flex items-center space-x-3">
                 <span className="text-sm text-gray-700">
-                  Welcome, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
+                  Welcome, Demo User
                 </span>
-                <UserButton 
-                  appearance={{
-                    elements: {
-                      avatarBox: "w-8 h-8"
-                    }
-                  }}
-                />
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                  DU
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
