@@ -27,26 +27,35 @@ export default function CompanyFormationForm() {
   }
 
   const handleArrayFieldChange = (arrayField: string, index: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [arrayField]: prev[arrayField as keyof typeof prev].map((item: any, i: number) => 
-        i === index ? { ...item, [field]: value } : item
-      )
-    }))
+    setFormData(prev => {
+      const currentArray = prev[arrayField as keyof typeof prev] as any[]
+      return {
+        ...prev,
+        [arrayField]: currentArray.map((item: any, i: number) => 
+          i === index ? { ...item, [field]: value } : item
+        )
+      }
+    })
   }
 
   const addArrayItem = (arrayField: string, template: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [arrayField]: [...prev[arrayField as keyof typeof prev], template]
-    }))
+    setFormData(prev => {
+      const currentArray = prev[arrayField as keyof typeof prev] as any[]
+      return {
+        ...prev,
+        [arrayField]: [...currentArray, template]
+      }
+    })
   }
 
   const removeArrayItem = (arrayField: string, index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [arrayField]: prev[arrayField as keyof typeof prev].filter((_: any, i: number) => i !== index)
-    }))
+    setFormData(prev => {
+      const currentArray = prev[arrayField as keyof typeof prev] as any[]
+      return {
+        ...prev,
+        [arrayField]: currentArray.filter((_: any, i: number) => i !== index)
+      }
+    })
   }
 
   const nextStep = () => {
