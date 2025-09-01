@@ -1,0 +1,257 @@
+# IFZA Company Formation Workflow Configuration
+name: "IFZA Company Formation"
+description: "Complete workflow for forming a company in IFZA free zone"
+version: "1.0"
+workflow_type: "company_formation"
+free_zone: "IFZA"
+
+# Workflow metadata
+metadata:
+  estimated_duration_days: 7
+  required_documents:
+    - passport_copy
+    - emirates_id_copy
+    - utility_bill
+    - noc_letter
+  fees:
+    government_fee: 2500
+    service_fee: 500
+    currency: "AED"
+
+# Workflow steps
+steps:
+  - step_number: 1
+    step_type: "FORM"
+    title: "Company Information"
+    description: "Provide basic company details and business information"
+    required: true
+    fields:
+      - name: "company_name"
+        type: "text"
+        label: "Proposed Company Name"
+        required: true
+        validation:
+          min_length: 3
+          max_length: 100
+      - name: "trade_name"
+        type: "text"
+        label: "Trade Name (if different)"
+        required: false
+      - name: "business_activity"
+        type: "select"
+        label: "Primary Business Activity"
+        required: true
+        options:
+          - "Trading"
+          - "Consulting"
+          - "IT Services"
+          - "Marketing"
+          - "Import/Export"
+          - "Other"
+      - name: "business_description"
+        type: "textarea"
+        label: "Detailed Business Description"
+        required: true
+        validation:
+          min_length: 50
+          max_length: 500
+
+  - step_number: 2
+    step_type: "FORM"
+    title: "Shareholder & Director Information"
+    description: "Provide details of company shareholders and directors"
+    required: true
+    fields:
+      - name: "shareholders"
+        type: "array"
+        label: "Shareholders"
+        required: true
+        min_items: 1
+        max_items: 50
+        item_schema:
+          - name: "full_name"
+            type: "text"
+            required: true
+          - name: "nationality"
+            type: "select"
+            required: true
+            options: "countries"
+          - name: "passport_number"
+            type: "text"
+            required: true
+          - name: "share_percentage"
+            type: "number"
+            required: true
+            validation:
+              min: 1
+              max: 100
+      - name: "directors"
+        type: "array"
+        label: "Directors"
+        required: true
+        min_items: 1
+        item_schema:
+          - name: "full_name"
+            type: "text"
+            required: true
+          - name: "nationality"
+            type: "select"
+            required: true
+          - name: "passport_number"
+            type: "text"
+            required: true
+
+  - step_number: 3
+    step_type: "DOC_UPLOAD"
+    title: "Document Upload"
+    description: "Upload required documents for company formation"
+    required: true
+    document_requirements:
+      - type: "passport_copy"
+        title: "Passport Copies"
+        description: "Clear copies of all shareholders' and directors' passports"
+        required: true
+        multiple: true
+        accepted_formats: ["PDF", "JPG", "PNG"]
+        max_size_mb: 10
+      - type: "emirates_id_copy"
+        title: "Emirates ID Copies"
+        description: "Emirates ID copies (if applicable)"
+        required: false
+        multiple: true
+        accepted_formats: ["PDF", "JPG", "PNG"]
+      - type: "utility_bill"
+        title: "Utility Bill"
+        description: "Recent utility bill as proof of address"
+        required: true
+        accepted_formats: ["PDF", "JPG", "PNG"]
+      - type: "noc_letter"
+        title: "No Objection Certificate"
+        description: "NOC from current employer (if applicable)"
+        required: false
+        accepted_formats: ["PDF", "JPG", "PNG"]
+
+  - step_number: 4
+    step_type: "REVIEW"
+    title: "Application Review"
+    description: "CSP team reviews the application and documents"
+    required: true
+    assignee_role: "csp_admin"
+    auto_assign: true
+    review_criteria:
+      - "Company name availability"
+      - "Document completeness and clarity"
+      - "Shareholder eligibility"
+      - "Business activity compliance"
+    actions:
+      - "approve"
+      - "request_changes"
+      - "reject"
+
+  - step_number: 5
+    step_type: "PAYMENT"
+    title: "Payment Processing"
+    description: "Process government and service fees"
+    required: true
+    payment_items:
+      - name: "Government Fee"
+        amount: 2500
+        currency: "AED"
+        type: "government"
+      - name: "Service Fee"
+        amount: 500
+        currency: "AED"
+        type: "service"
+    payment_methods:
+      - "credit_card"
+      - "bank_transfer"
+    auto_proceed: false
+
+  - step_number: 6
+    step_type: "AUTO"
+    title: "IFZA Portal Submission"
+    description: "Automated submission to IFZA portal"
+    required: true
+    automation:
+      service: "ifza_portal"
+      action: "submit_application"
+      retry_attempts: 3
+      timeout_minutes: 30
+    fallback:
+      type: "manual"
+      assignee_role: "csp_admin"
+      instructions: "Manually submit application to IFZA portal"
+
+  - step_number: 7
+    step_type: "AUTO"
+    title: "Status Monitoring"
+    description: "Monitor application status with IFZA"
+    required: true
+    automation:
+      service: "ifza_portal"
+      action: "check_status"
+      schedule: "daily"
+      max_duration_days: 5
+    conditions:
+      success: "status == 'approved'"
+      failure: "status == 'rejected'"
+      timeout: "days_elapsed > 7"
+
+  - step_number: 8
+    step_type: "ISSUANCE"
+    title: "License Issuance"
+    description: "Generate and deliver trade license"
+    required: true
+    deliverables:
+      - type: "trade_license"
+        format: "PDF"
+        template: "ifza_trade_license"
+      - type: "establishment_card"
+        format: "PDF"
+        template: "ifza_establishment_card"
+    delivery_methods:
+      - "email"
+      - "portal_download"
+
+  - step_number: 9
+    step_type: "NOTIFY"
+    title: "Completion Notification"
+    description: "Notify client of successful company formation"
+    required: true
+    notifications:
+      - type: "email"
+        template: "company_formation_complete"
+        recipients: ["company_owner", "company_members"]
+      - type: "sms"
+        template: "formation_complete_sms"
+        recipients: ["company_owner"]
+    next_steps:
+      - "Open corporate bank account"
+      - "Apply for tax registration"
+      - "Setup visa processing"
+
+# Validation rules
+validation:
+  total_shareholding: 100
+  min_shareholders: 1
+  max_shareholders: 50
+  required_roles: ["director"]
+
+# Automation settings
+automation:
+  enabled: true
+  fallback_to_manual: true
+  notification_on_failure: true
+  max_retry_attempts: 3
+
+# Notifications
+notifications:
+  step_completion:
+    enabled: true
+    recipients: ["company_owner"]
+  step_failure:
+    enabled: true
+    recipients: ["company_owner", "csp_admin"]
+  workflow_completion:
+    enabled: true
+    recipients: ["company_owner", "company_members"]
