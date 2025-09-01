@@ -1,9 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter, Merriweather } from 'next/font/google'
-import Navigation from '@/components/navigation'
 import './globals.css'
 
-// Temporarily disable Clerk until proper API keys are configured
+// Navigation removed - dashboard pages have their own sidebar navigation
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -30,14 +29,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${merriweather.variable}`}>
-      <body className={inter.className}>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <main>
+              <body className={inter.className}>
+          <div className="min-h-screen bg-gray-50">
             {children}
-          </main>
-        </div>
-      </body>
+          </div>
+        </body>
     </html>
   )
 }

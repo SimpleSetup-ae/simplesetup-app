@@ -1,10 +1,13 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Navigation from '@/components/navigation'
 import Link from 'next/link'
 
 export default function HomePage() {
   return (
-    <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto px-4 py-16">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">
           Simple Setup Corporate Tax Registration Agent
