@@ -18,19 +18,13 @@ Rails.application.routes.draw do
           post :form_data, to: 'companies#update_form_data'
           post :merge_auto_save
           get :dashboard, to: 'dashboard#show'
+          patch :owner_details, to: 'companies#update_owner_details'
         end
         
         # Nested resources
         resources :documents, except: [:new, :edit] do
           member do
             get :download
-          end
-        end
-        
-        # Tax registrations nested under companies
-        resources :tax_registrations do
-          member do
-            post :apply
           end
         end
         

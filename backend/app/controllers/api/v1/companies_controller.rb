@@ -1,6 +1,7 @@
 class Api::V1::CompaniesController < ApplicationController
-  before_action :set_company, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state]
-  before_action :authorize_company_access, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state]
+  before_action :set_company, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state, :update_owner_details]
+  before_action :authorize_company_access, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state, :update_owner_details]
+  before_action :authorize_owner_access, only: [:update_owner_details]
   
   def index
     @companies = current_user.companies
@@ -173,6 +174,50 @@ class Api::V1::CompaniesController < ApplicationController
       }
     }
   end
+
+  # PATCH /api/v1/companies/:id/owner_details
+  def update_owner_details
+    permitted_params = params.permit(:company_website, :operating_name_arabic, :company_phone)
+    
+    # Update metadata with new values
+    current_metadata = @company.metadata || {}
+    
+    if permitted_params[:company_website].present?
+      current_metadata['website'] = permitted_params[:company_website]
+    end
+    
+    if permitted_params[:operating_name_arabic].present?
+      current_metadata['operating_name_arabic'] = permitted_params[:operating_name_arabic]
+    end
+    
+    # Update phone in formation data (primary shareholder)
+    if permitted_params[:company_phone].present?
+      form_data = @company.form_data || {}
+      shareholders = form_data['shareholders'] || []
+      if shareholders.any?
+        shareholders[0] = shareholders[0].merge('mobile' => permitted_params[:company_phone])
+        @company.update!(formation_data: form_data.merge('shareholders' => shareholders))
+      end
+    end
+    
+    # Update owner's email if provided (though email should come from Clerk)
+    if permitted_params[:company_email].present? && current_user == @company.owner
+      current_user.update!(email: permitted_params[:company_email])
+    end
+    
+    if @company.update!(metadata: current_metadata)
+      render json: {
+        success: true,
+        data: serialize_company_detailed(@company),
+        message: 'Company details updated successfully'
+      }
+    else
+      render json: {
+        success: false,
+        errors: @company.errors.full_messages
+      }, status: :unprocessable_entity
+    end
+  end
   
   private
   
@@ -194,12 +239,18 @@ class Api::V1::CompaniesController < ApplicationController
     end
   end
   
+  def authorize_owner_access
+    unless @company.owner == current_user
+      render json: {
+        success: false,
+        error: 'Owner access required'
+      }, status: :forbidden
+    end
+  end
+  
   def company_params
     params.require(:company).permit(
-      :name, :trade_name, :free_zone, :website, :official_email, :phone,
-      :operating_name_arabic, :license_type, :first_license_issue_date,
-      :current_license_issue_date, :license_expiry_date, :establishment_card_number,
-      :establishment_card_issue_date, :establishment_card_expiry_date,
+      :name, :trade_name, :free_zone, 
       activity_codes: []
     )
   end
@@ -226,8 +277,26 @@ class Api::V1::CompaniesController < ApplicationController
   def serialize_company_detailed(company)
     base_data = serialize_company(company)
     
-    # Get corporate tax registration
-    tax_registration = company.corporate_tax_registration
+    # Get formation data
+    form_data = company.form_data || {}
+    
+    # Get primary shareholder (first shareholder) for phone number
+    primary_shareholder = form_data.dig('shareholders', 0) || {}
+    
+    # Get tax registration for TRN
+    corporate_tax = company.tax_registrations.find_by(registration_type: 'corporate_tax')
+    
+    # Get freezone details
+    freezone = Freezone.find_by(code: company.free_zone)
+    
+    # Get key documents
+    trade_license_doc = company.documents.find_by(document_type: 'trade_license')
+    moa_doc = company.documents.find_by(document_type: 'moa')
+    aoa_doc = company.documents.find_by(document_type: 'aoa')
+    
+    # Calculate days since company creation for TRN deadline
+    days_since_creation = company.created_at ? (Date.current - company.created_at.to_date).to_i : 0
+    trn_days_remaining = [90 - days_since_creation, 0].max
     
     base_data.merge({
       activity_codes: company.activity_codes,
@@ -237,48 +306,33 @@ class Api::V1::CompaniesController < ApplicationController
       current_workflow: company.current_workflow ? 
                         serialize_workflow_instance(company.current_workflow) : nil,
       
-      # Company tab specific fields
-      website: company.website,
-      official_email: company.official_email,
-      phone: company.phone,
-      contact_email: company.contact_email,
-      contact_phone: company.contact_phone,
-      operating_name_arabic: company.operating_name_arabic,
-      employee_visa_eligibility: company.employee_visa_eligibility,
+      # Company Details for Owner Dashboard
+      company_website: company.metadata.dig('website') || form_data.dig('company_website'),
+      operating_name_arabic: company.metadata.dig('operating_name_arabic') || form_data.dig('operating_name_arabic'),
+      legal_framework: freezone&.name || company.free_zone,
+      company_phone: primary_shareholder.dig('mobile') || primary_shareholder.dig('phone'),
+      visa_eligibility: form_data.dig('visa_count') || 0,
       
-      # License information
-      license_type: company.license_type,
-      license_status: company.license_status,
-      first_license_issue_date: company.first_license_issue_date&.iso8601,
-      current_license_issue_date: company.current_license_issue_date&.iso8601,
-      license_expiry_date: company.license_expiry_date&.iso8601,
-      establishment_card_number: company.establishment_card_number,
-      establishment_card_issue_date: company.establishment_card_issue_date&.iso8601,
-      establishment_card_expiry_date: company.establishment_card_expiry_date&.iso8601,
+      # Tax Registration
+      trn_number: corporate_tax&.trn_number,
+      trn_status: corporate_tax&.status,
+      trn_days_remaining: trn_days_remaining,
+      trn_deadline_status: trn_days_remaining == 0 ? 'overdue' : (trn_days_remaining <= 30 ? 'warning' : 'normal'),
       
-      # Tax registration information
-      tax_registration: tax_registration ? {
-        trn_number: tax_registration.trn_number,
-        status: tax_registration.status,
-        registration_date: tax_registration.registration_date&.iso8601,
-        needs_registration: company.needs_tax_registration?
-      } : {
-        trn_number: nil,
-        status: 'not_registered',
-        registration_date: nil,
-        needs_registration: true
-      },
-      tax_deadline: {
-        deadline_date: company.tax_registration_deadline&.iso8601,
-        days_remaining: company.days_until_tax_deadline,
-        status: company.tax_deadline_status
-      },
+      # License Information
+      license_type: "#{company.free_zone} Freezone License",
+      license_issue_date: company.metadata.dig('license_issue_date'),
+      license_expiry_date: company.metadata.dig('license_expiry_date'),
+      first_license_issue_date: company.metadata.dig('first_license_issue_date'),
+      establishment_card_number: company.metadata.dig('establishment_card_number'),
+      establishment_card_issue_date: company.metadata.dig('establishment_card_issue_date'),
+      establishment_card_expiry_date: company.metadata.dig('establishment_card_expiry_date'),
       
-      # Document certificates
-      certificates: {
-        certificate_of_incorporation: company.certificate_of_incorporation ? serialize_document(company.certificate_of_incorporation) : nil,
-        commercial_license: company.commercial_license_document ? serialize_document(company.commercial_license_document) : nil,
-        register_of_directors: company.register_of_directors_document ? serialize_document(company.register_of_directors_document) : nil
+      # Key Documents
+      documents: {
+        trade_license: trade_license_doc ? serialize_document(trade_license_doc) : nil,
+        certificate_of_incorporation: moa_doc ? serialize_document(moa_doc) : nil,
+        register_of_directors: aoa_doc ? serialize_document(aoa_doc) : nil
       }
     })
   end
@@ -315,13 +369,14 @@ class Api::V1::CompaniesController < ApplicationController
     {
       id: document.id,
       name: document.name,
-      document_type: document.document_type,
       file_name: document.file_name,
-      download_url: document.display_url,
-      thumbnail_url: document.display_url, # Can be enhanced with actual thumbnail generation
-      uploaded_at: document.uploaded_at&.iso8601,
+      document_type: document.document_type,
       file_size: document.file_size,
-      verified: document.verified
+      content_type: document.content_type,
+      is_image: document.is_image?,
+      is_pdf: document.is_pdf?,
+      created_at: document.created_at&.iso8601,
+      download_url: "/api/v1/documents/#{document.id}/download"
     }
   end
   

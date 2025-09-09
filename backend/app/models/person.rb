@@ -48,6 +48,22 @@ class Person < ApplicationRecord
     'None'
   end
   
+  def passport_expiry_status
+    return 'no_passport' unless passport_expiry_date
+    
+    days_until_expiry = (passport_expiry_date - Date.current).to_i
+    
+    if days_until_expiry < 0
+      'expired'
+    elsif days_until_expiry <= 30
+      'expiring_soon'
+    elsif days_until_expiry <= 90
+      'expiring_within_3_months'
+    else
+      'valid'
+    end
+  end
+  
   # Validation for total shareholding
   def self.validate_total_shareholding(company)
     total = company.people.shareholders.sum(:share_percentage)
