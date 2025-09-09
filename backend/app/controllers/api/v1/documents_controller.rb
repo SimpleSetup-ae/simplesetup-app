@@ -1,164 +1,272 @@
-class Api::V1::DocumentsController < ApplicationController
-  before_action :set_document, only: [:show, :ocr]
-  before_action :set_company, only: [:index, :create, :upload_url]
-  before_action :authorize_document_access
-  
+class Api::V1::DocumentsController < Api::V1::BaseController
+  before_action :set_company, only: [:index, :create, :show, :destroy]
+  before_action :set_document, only: [:show, :destroy, :download]
+  before_action :authorize_company_access, only: [:index, :create, :show, :destroy]
+
+  # GET /api/v1/companies/:company_id/documents
   def index
-    @documents = @company.documents
-                         .includes(:workflow_step)
-                         .order(created_at: :desc)
+    @documents = @company.documents.includes(:user, :person)
+    
+    # Apply filters
+    @documents = @documents.by_type(params[:document_type]) if params[:document_type].present?
+    @documents = @documents.where(person_id: params[:person_id]) if params[:person_id].present?
+    @documents = @documents.where(upload_status: params[:upload_status]) if params[:upload_status].present?
     
     render json: {
       success: true,
-      data: @documents.map { |doc| serialize_document(doc) }
+      data: @documents.map do |doc|
+        {
+          id: doc.id,
+          name: doc.name,
+          file_name: doc.file_name,
+          original_filename: doc.original_filename,
+          document_type: doc.document_type,
+          document_category: doc.document_category,
+          content_type: doc.content_type,
+          file_size: doc.file_size,
+          human_file_size: doc.file_size_mb,
+          upload_status: doc.upload_status,
+          upload_error: doc.upload_error,
+          person_id: doc.person_id,
+          is_image: doc.is_image?,
+          is_pdf: doc.is_pdf?,
+          accessible: doc.accessible?,
+          display_url: doc.display_url,
+          created_at: doc.created_at,
+          updated_at: doc.updated_at
+        }
+      end
     }
   end
-  
-  def show
-    render json: {
-      success: true,
-      data: serialize_document_detailed(@document)
-    }
-  end
-  
+
+  # POST /api/v1/companies/:company_id/documents
   def create
-    @document = @company.documents.build(document_params)
-    @document.uploaded_at = Time.current
-    
-    if @document.save
+    uploaded_files = params[:files] || []
+    results = []
+    errors = []
+
+    uploaded_files.each_with_index do |file, index|
+      begin
+        document = @company.documents.build(
+          file_name: file.original_filename,
+          content_type: file.content_type,
+          file_size: file.size,
+          document_type: determine_document_type(file.original_filename),
+          document_category: params[:document_category] || determine_category(file.original_filename),
+          person_id: params[:person_id],
+          user: current_user,
+          upload_status: 'pending'
+        )
+
+        if document.save
+          # Upload to Supabase Storage
+          if document.upload_to_supabase_storage(file, current_user&.id)
+            results << {
+              id: document.id,
+              name: document.name,
+              file_name: document.file_name,
+              upload_status: 'completed',
+              display_url: document.display_url
+            }
+            
+            # Trigger OCR processing if it's a document that can be processed
+            if document.can_be_processed? && document.document_type.in?(['passport', 'emirates_id', 'visa'])
+              document.start_processing!
+            end
+          else
+            errors << {
+              file: file.original_filename,
+              error: document.upload_error || 'Upload failed'
+            }
+          end
+        else
+          errors << {
+            file: file.original_filename,
+            error: document.errors.full_messages.join(', ')
+          }
+        end
+      rescue => e
+        Rails.logger.error "Document upload error: #{e.message}"
+        errors << {
+          file: file.original_filename,
+          error: "Upload failed: #{e.message}"
+        }
+      end
+    end
+
+    if errors.empty?
       render json: {
         success: true,
-        data: serialize_document_detailed(@document),
-        message: 'Document created successfully'
-      }, status: :created
+        data: results,
+        message: "#{results.count} file(s) uploaded successfully"
+      }
+    elsif results.any?
+      render json: {
+        success: true,
+        data: results,
+        errors: errors,
+        message: "#{results.count} file(s) uploaded, #{errors.count} failed"
+      }, status: :partial_content
     else
       render json: {
         success: false,
-        errors: @document.errors.full_messages
+        errors: errors,
+        message: "All uploads failed"
       }, status: :unprocessable_entity
     end
   end
-  
-  def upload_url
-    file_name = params[:file_name]
-    content_type = params[:content_type]
-    file_size = params[:file_size]&.to_i
-    workflow_step_id = params[:workflow_step_id]
-    
-    # Validate file
-    validation = DocumentUploadService.validate_file_upload(file_name, content_type, file_size)
-    
-    unless validation[:valid]
-      return render json: {
-        success: false,
-        errors: validation[:errors]
-      }, status: :unprocessable_entity
-    end
-    
-    # Generate upload URL
-    upload_data = DocumentUploadService.generate_upload_url(
-      @company, 
-      file_name, 
-      content_type, 
-      workflow_step_id
-    )
-    
+
+  # GET /api/v1/documents/:id
+  def show
     render json: {
       success: true,
-      data: upload_data
+      data: {
+        id: @document.id,
+        name: @document.name,
+        file_name: @document.file_name,
+        original_filename: @document.original_filename,
+        document_type: @document.document_type,
+        document_category: @document.document_category,
+        content_type: @document.content_type,
+        file_size: @document.file_size,
+        human_file_size: @document.file_size_mb,
+        upload_status: @document.upload_status,
+        upload_error: @document.upload_error,
+        ocr_status: @document.ocr_status,
+        person_id: @document.person_id,
+        is_image: @document.is_image?,
+        is_pdf: @document.is_pdf?,
+        accessible: @document.accessible?,
+        display_url: @document.display_url,
+        download_url: @document.download_url,
+        extracted_data: @document.extracted_data,
+        confidence_score: @document.confidence_score,
+        fraud_risk_level: @document.fraud_risk_level,
+        created_at: @document.created_at,
+        updated_at: @document.updated_at
+      }
     }
   end
-  
-  def ocr
-    unless @document.can_be_processed?
-      return render json: {
-        success: false,
-        error: 'Document cannot be processed'
-      }, status: :unprocessable_entity
-    end
-    
-    # Queue OCR processing job
-    DocumentOcrJob.perform_later(@document)
-    
-    @document.update!(ocr_status: 'processing')
-    
-    render json: {
-      success: true,
-      data: serialize_document(@document),
-      message: 'OCR processing queued'
-    }
-  end
-  
-  private
-  
-  def set_document
-    @document = Document.find(params[:id])
-    @company = @document.company
-  rescue ActiveRecord::RecordNotFound
-    render json: {
-      success: false,
-      error: 'Document not found'
-    }, status: :not_found
-  end
-  
-  def set_company
-    @company = current_user.companies.find(params[:company_id]) if params[:company_id]
-    @company ||= Document.find(params[:document_id]).company if params[:document_id]
-  rescue ActiveRecord::RecordNotFound
-    render json: {
-      success: false,
-      error: 'Company not found or access denied'
-    }, status: :not_found
-  end
-  
-  def authorize_document_access
-    unless @company.can_be_accessed_by?(current_user)
+
+  # DELETE /api/v1/documents/:id
+  def destroy
+    begin
+      # Delete from storage first
+      if @document.delete_from_storage
+        @document.destroy!
+        render json: {
+          success: true,
+          message: 'Document deleted successfully'
+        }
+      else
+        render json: {
+          success: false,
+          error: 'Failed to delete file from storage'
+        }, status: :unprocessable_entity
+      end
+    rescue => e
+      Rails.logger.error "Document deletion error: #{e.message}"
       render json: {
         success: false,
-        error: 'Access denied'
+        error: "Deletion failed: #{e.message}"
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # GET /api/v1/documents/:id/download
+  def download
+    unless @document.accessible?
+      render json: {
+        success: false,
+        error: 'Document not accessible'
+      }, status: :not_found
+      return
+    end
+
+    download_url = @document.get_signed_url(1.hour)
+    
+    if download_url
+      render json: {
+        success: true,
+        download_url: download_url,
+        expires_at: 1.hour.from_now
+      }
+    else
+      render json: {
+        success: false,
+        error: 'Unable to generate download URL'
+      }, status: :unprocessable_entity
+    end
+  end
+
+  private
+
+  def set_company
+    @company = Company.find(params[:company_id])
+  end
+
+  def set_document
+    if params[:company_id]
+      @document = @company.documents.find(params[:id])
+    else
+      @document = Document.find(params[:id])
+    end
+  end
+
+  def authorize_company_access
+    unless @company.can_be_accessed_by?(current_user)
+      render json: { 
+        success: false, 
+        error: 'Access denied' 
       }, status: :forbidden
     end
   end
-  
-  def document_params
-    params.require(:document).permit(
-      :name, :document_type, :file_name, :file_size, 
-      :mime_type, :storage_path, :storage_bucket,
-      :workflow_step_id, metadata: {}
-    )
-  end
-  
-  def serialize_document(document)
-    {
-      id: document.id,
-      name: document.name,
-      document_type: document.document_type,
-      file_name: document.file_name,
-      file_size: document.file_size,
-      file_size_mb: document.file_size_mb,
-      mime_type: document.mime_type,
-      ocr_status: document.ocr_status,
-      confidence_score: document.confidence_score,
-      uploaded_at: document.uploaded_at&.iso8601,
-      processed_at: document.processed_at&.iso8601,
-      download_url: document.download_url,
-      workflow_step: document.workflow_step ? {
-        id: document.workflow_step.id,
-        title: document.workflow_step.title,
-        step_number: document.workflow_step.step_number
-      } : nil
-    }
-  end
-  
-  def serialize_document_detailed(document)
-    base_data = serialize_document(document)
+
+  def determine_document_type(filename)
+    filename_lower = filename.downcase
     
-    base_data.merge({
-      ocr_data: document.ocr_data,
-      extracted_text: document.extracted_text,
-      metadata: document.metadata,
-      storage_path: document.storage_path,
-      storage_bucket: document.storage_bucket
-    })
+    case filename_lower
+    when /passport/
+      'passport'
+    when /emirates.*id|eid/
+      'emirates_id'
+    when /visa/
+      'visa'
+    when /license|trade/
+      'trade_license'
+    when /utility|bill/
+      'utility_bill'
+    when /bank.*statement/
+      'bank_statement'
+    when /noc/
+      'noc_letter'
+    when /moa|memorandum/
+      'moa'
+    when /aoa|articles/
+      'aoa'
+    when /resolution/
+      'board_resolution'
+    when /power.*attorney|poa/
+      'power_of_attorney'
+    else
+      'other'
+    end
+  end
+
+  def determine_category(filename)
+    filename_lower = filename.downcase
+    
+    case filename_lower
+    when /passport/
+      'passport'
+    when /license|certificate/
+      'license'
+    when /bank|financial/
+      'financial'
+    when /memorandum|articles|resolution|poa/
+      'corporate'
+    else
+      'other'
+    end
   end
 end

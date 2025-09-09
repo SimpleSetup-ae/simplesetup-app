@@ -10,6 +10,9 @@ module SimpleSetupApi
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 7.1
+    
+    # Skip Active Record connection on boot for testing
+    config.active_record.migration_error = false if ENV['SKIP_DB'] == 'true'
 
     # Configuration for the application, engines, and railties goes here.
     #

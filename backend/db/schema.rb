@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 9) do
+ActiveRecord::Schema[7.1].define(version: 18) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
@@ -56,7 +56,7 @@ ActiveRecord::Schema[7.1].define(version: 9) do
     t.string "document_type"
     t.string "file_name", null: false
     t.bigint "file_size", null: false
-    t.string "mime_type", null: false
+    t.string "content_type", null: false
     t.string "storage_path", null: false
     t.string "storage_bucket", default: "documents"
     t.string "ocr_status", default: "pending"
@@ -69,13 +69,49 @@ ActiveRecord::Schema[7.1].define(version: 9) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "user_id"
+    t.uuid "person_id"
+    t.jsonb "extracted_data", default: {}
+    t.jsonb "fraud_assessment", default: {}
+    t.text "file_data"
+    t.text "thumbnail_data"
+    t.boolean "verified", default: false
+    t.datetime "verified_at"
+    t.uuid "verified_by_id"
+    t.datetime "ocr_completed_at"
+    t.datetime "fraud_check_completed_at"
+    t.index "((fraud_assessment ->> 'risk_band'::text))", name: "index_documents_on_fraud_risk_band", where: "(fraud_assessment IS NOT NULL)"
     t.index ["company_id"], name: "index_documents_on_company_id"
     t.index ["deleted_at"], name: "index_documents_on_deleted_at"
     t.index ["document_type"], name: "index_documents_on_document_type"
+    t.index ["extracted_data"], name: "index_documents_on_extracted_data", using: :gin
+    t.index ["fraud_assessment"], name: "index_documents_on_fraud_assessment", using: :gin
     t.index ["ocr_status"], name: "index_documents_on_ocr_status"
+    t.index ["person_id"], name: "index_documents_on_person_id"
     t.index ["storage_path"], name: "index_documents_on_storage_path", unique: true
     t.index ["uploaded_at"], name: "index_documents_on_uploaded_at"
+    t.index ["user_id"], name: "index_documents_on_user_id"
+    t.index ["verified"], name: "index_documents_on_verified"
     t.index ["workflow_step_id"], name: "index_documents_on_workflow_step_id"
+  end
+
+  create_table "freezones", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "code", null: false
+    t.string "location"
+    t.text "description"
+    t.boolean "active", default: true, null: false
+    t.string "website_url"
+    t.string "contact_email"
+    t.string "contact_phone"
+    t.jsonb "metadata", default: {}
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_freezones_on_active"
+    t.index ["code"], name: "index_freezones_on_code", unique: true
+    t.index ["deleted_at"], name: "index_freezones_on_deleted_at"
+    t.index ["name"], name: "index_freezones_on_name"
   end
 
   create_table "people", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -187,6 +223,8 @@ ActiveRecord::Schema[7.1].define(version: 9) do
   add_foreign_key "company_memberships", "companies"
   add_foreign_key "company_memberships", "users"
   add_foreign_key "documents", "companies"
+  add_foreign_key "documents", "people"
+  add_foreign_key "documents", "users"
   add_foreign_key "documents", "workflow_steps"
   add_foreign_key "people", "companies"
   add_foreign_key "requests", "companies"

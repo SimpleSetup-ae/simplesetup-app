@@ -2,13 +2,25 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Background } from '@/components/ui/background-dots-masked'
+import Link from 'next/link'
+import { ArrowLeft, ArrowRight, Plus, Minus } from 'lucide-react'
+import { Logo } from '@/components/ui/Logo'
 import { FREE_ZONES } from '@simple-setup/shared'
 
 export default function CompanyFormationForm() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [selectedReason, setSelectedReason] = useState("")
+  const [businessType, setBusinessType] = useState("")
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
+  const [numberOfShareholders, setNumberOfShareholders] = useState(1)
+  const [companyName, setCompanyName] = useState("")
+  const [nameValidation, setNameValidation] = useState<{errors: string[], isValid: boolean}>({errors: [], isValid: true})
+  
   const [formData, setFormData] = useState({
     name: '',
     trade_name: '',
@@ -18,6 +30,29 @@ export default function CompanyFormationForm() {
     shareholders: [{ full_name: '', nationality: '', passport_number: '', share_percentage: 100 }],
     directors: [{ full_name: '', nationality: '', passport_number: '' }]
   })
+
+  const reasons = [
+    { id: "new-company", label: "New company creation" },
+    { id: "visa-purposes", label: "Setup for visa purposes only" },
+    { id: "international-expansion", label: "International Expansion (of an existing business)" }
+  ]
+
+  const businessSuggestions = [
+    "Software Development",
+    "Consultancy",
+    "Public Relations",
+    "Marketing Agency",
+    "Trading Company",
+    "Real Estate",
+    "E-commerce",
+    "Financial Services",
+    "Healthcare Services",
+    "Educational Services"
+  ]
+
+  const filteredSuggestions = businessSuggestions.filter(suggestion =>
+    suggestion.toLowerCase().includes(businessType.toLowerCase())
+  ).slice(0, 3)
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
@@ -58,6 +93,127 @@ export default function CompanyFormationForm() {
     })
   }
 
+  const handleReasonSelect = (reason: string) => {
+    setSelectedReason(reason)
+    // Auto-advance to next step
+    setTimeout(() => {
+      setCurrentStep(2)
+    }, 300)
+  }
+
+  const handleBusinessTypeChange = (value: string) => {
+    setBusinessType(value)
+    setShowSuggestions(value.length > 0)
+    setSelectedSuggestionIndex(-1)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => 
+        prev < filteredSuggestions.length - 1 ? prev + 1 : 0
+      )
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedSuggestionIndex(prev => 
+        prev > 0 ? prev - 1 : filteredSuggestions.length - 1
+      )
+    } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+      e.preventDefault()
+      selectSuggestion(filteredSuggestions[selectedSuggestionIndex])
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false)
+      setSelectedSuggestionIndex(-1)
+    }
+  }
+
+  const selectSuggestion = (suggestion: string) => {
+    setBusinessType(suggestion)
+    setShowSuggestions(false)
+    setSelectedSuggestionIndex(-1)
+    
+    // Focus on the Next Step button after selection
+    setTimeout(() => {
+      const nextButton = document.querySelector('[data-next-button="true"]') as HTMLButtonElement
+      if (nextButton) {
+        nextButton.focus()
+      }
+    }, 100)
+  }
+
+  const validateCompanyName = (name: string) => {
+    if (name.length < 3) {
+      setNameValidation({ errors: [], isValid: true })
+      return
+    }
+
+    const errors: string[] = []
+
+    // Check for invalid characters (only letters, numbers, spaces, and & allowed)
+    const invalidChars = /[^a-zA-Z0-9\s&]/
+    if (invalidChars.test(name)) {
+      errors.push("Only letters, numbers, spaces, and ampersand (&) are allowed")
+    }
+
+    // Check for double spaces or spaces at beginning/end
+    if (name.includes('  ') || name.startsWith(' ') || name.endsWith(' ')) {
+      errors.push("No double spaces or spaces at the beginning/end")
+    }
+
+    // Check that no single word is less than 3 characters
+    const words = name.trim().split(/\s+/)
+    const shortWords = words.filter(word => word.length < 3 && word.length > 0)
+    if (shortWords.length > 0) {
+      errors.push("Each word must be at least 3 characters long")
+    }
+
+    // Check for consecutive spaces between letters (not allowed)
+    if (/[a-zA-Z]\s{2,}[a-zA-Z]/.test(name)) {
+      errors.push("Multiple spaces between words are not allowed")
+    }
+
+    setNameValidation({ errors, isValid: errors.length === 0 })
+  }
+
+  const handleCompanyNameChange = (value: string) => {
+    setCompanyName(value)
+    validateCompanyName(value)
+  }
+
+  const handleNext = () => {
+    if (currentStep === 2 && businessType) {
+      setCurrentStep(3)
+    } else if (currentStep === 3 && numberOfShareholders) {
+      setCurrentStep(4)
+    } else if (currentStep === 4) {
+      setCurrentStep(5)
+    } else if (currentStep === 5 && companyName && nameValidation.isValid) {
+      // TODO: Submit form
+      console.log("Form completed:", { 
+        selectedReason, 
+        businessType, 
+        numberOfShareholders, 
+        companyName,
+        formData 
+      })
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const handleStepClick = (step: number) => {
+    // Only allow navigation to current step or previous completed steps
+    if (step <= currentStep) {
+      setCurrentStep(step)
+    }
+  }
+
   const nextStep = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1)
@@ -79,341 +235,329 @@ export default function CompanyFormationForm() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Progress Indicator */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Formation Progress</CardTitle>
-          <CardDescription>Complete all steps to start your company formation</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-4">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step === currentStep ? 'bg-orange-500 text-white' :
-                  step < currentStep ? 'bg-green-500 text-white' :
-                  'bg-gray-200 text-gray-600'
-                }`}>
-                  {step}
-                </div>
-                {step < 3 && <div className="w-16 h-1 bg-gray-200 mx-2"></div>}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Dotted Background */}
+      <Background />
+      
+      <div className="w-full max-w-2xl relative z-10">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Link href="/" className="hover:scale-105 transition-all duration-300">
+              <div className="border-2 border-foreground px-3 py-1 rounded-md">
+                <Logo />
               </div>
+            </Link>
+          </div>
+          
+          {/* Progress indicator */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div
+                key={step}
+                onClick={() => handleStepClick(step)}
+                className={`w-6 h-2 rounded-full transition-all duration-300 ${
+                  step <= currentStep 
+                    ? 'bg-primary cursor-pointer hover:bg-primary/80' 
+                    : 'bg-muted cursor-not-allowed'
+                } ${step <= currentStep ? 'hover:scale-110' : ''}`}
+                title={step <= currentStep ? `Go to step ${step}` : `Step ${step} - not available yet`}
+              ></div>
             ))}
           </div>
-          <div className="mt-4 flex justify-between text-sm text-gray-600">
-            <span>Company Info</span>
-            <span>People</span>
-            <span>Review</span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Step 1: Company Information */}
-      {currentStep === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 1: Company Information</CardTitle>
-            <CardDescription>Provide basic company details and business information</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="company_name">Proposed Company Name *</Label>
-                <Input
-                  id="company_name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter your company name"
-                />
+        {/* Form Card */}
+        <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-8 md:p-12 shadow-xl">
+          {currentStep === 1 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+                  Reason for company formation?
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Help us understand your business needs
+                </p>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="trade_name">Trade Name</Label>
-                <Input
-                  id="trade_name"
-                  value={formData.trade_name}
-                  onChange={(e) => handleInputChange('trade_name', e.target.value)}
-                  placeholder="If different from company name"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="free_zone">Free Zone *</Label>
-                <select
-                  id="free_zone"
-                  value={formData.free_zone}
-                  onChange={(e) => handleInputChange('free_zone', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  {Object.entries(FREE_ZONES).map(([key, value]) => (
-                    <option key={key} value={key}>{value}</option>
+
+              <div className="space-y-4">
+                <RadioGroup value={selectedReason} onValueChange={handleReasonSelect} className="space-y-4">
+                  {reasons.map((reason) => (
+                    <div
+                      key={reason.id}
+                      className={`flex items-center space-x-4 p-4 md:p-6 rounded-xl border-2 transition-all duration-300 cursor-pointer hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80 hover:border-accent/50 ${
+                        selectedReason === reason.id
+                          ? "border-accent bg-gradient-to-r from-accent/5 to-background/80"
+                          : "border-border bg-background/50"
+                      }`}
+                      onClick={() => handleReasonSelect(reason.id)}
+                    >
+                      <RadioGroupItem value={reason.id} id={reason.id} />
+                      <Label
+                        htmlFor={reason.id}
+                        className="flex-1 text-base md:text-lg font-medium cursor-pointer"
+                      >
+                        {reason.label}
+                      </Label>
+                    </div>
                   ))}
-                </select>
+                </RadioGroup>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="business_activity">Primary Business Activity *</Label>
-                <select
-                  id="business_activity"
-                  value={formData.business_activity}
-                  onChange={(e) => handleInputChange('business_activity', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Select an activity</option>
-                  <option value="Trading">Trading</option>
-                  <option value="Consulting">Consulting</option>
-                  <option value="IT Services">IT Services</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Import/Export">Import/Export</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="business_description">Business Description *</Label>
-              <textarea
-                id="business_description"
-                value={formData.business_description}
-                onChange={(e) => handleInputChange('business_description', e.target.value)}
-                placeholder="Provide a detailed description of your business activities (minimum 50 characters)"
-                className="w-full p-3 border border-gray-300 rounded-md h-32 resize-none"
-              />
-              <p className="text-xs text-gray-500">
-                {formData.business_description.length}/500 characters
-              </p>
-            </div>
-            
-            <div className="flex justify-end">
-              <Button onClick={nextStep} disabled={!formData.name || !formData.business_activity || formData.business_description.length < 50}>
-                Next: Shareholder Information
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </>
+          )}
 
-      {/* Step 2: Shareholders & Directors */}
-      {currentStep === 2 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 2: Shareholder & Director Information</CardTitle>
-            <CardDescription>Provide details of company shareholders and directors</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            {/* Shareholders */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Shareholders</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => addArrayItem('shareholders', { full_name: '', nationality: '', passport_number: '', share_percentage: 0 })}
-                >
-                  Add Shareholder
-                </Button>
+          {currentStep === 2 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+                  Business Type?
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  What type of business will you be running?
+                </p>
               </div>
-              
-              {formData.shareholders.map((shareholder, index) => (
-                <Card key={index} className="mb-4">
-                  <CardContent className="pt-6">
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label>Full Name *</Label>
-                        <Input
-                          value={shareholder.full_name}
-                          onChange={(e) => handleArrayFieldChange('shareholders', index, 'full_name', e.target.value)}
-                          placeholder="Full name as in passport"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nationality *</Label>
-                        <Input
-                          value={shareholder.nationality}
-                          onChange={(e) => handleArrayFieldChange('shareholders', index, 'nationality', e.target.value)}
-                          placeholder="Nationality"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Passport Number *</Label>
-                        <Input
-                          value={shareholder.passport_number}
-                          onChange={(e) => handleArrayFieldChange('shareholders', index, 'passport_number', e.target.value)}
-                          placeholder="Passport number"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Share % *</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={shareholder.share_percentage}
-                            onChange={(e) => handleArrayFieldChange('shareholders', index, 'share_percentage', parseInt(e.target.value))}
-                            placeholder="Share %"
-                          />
-                          {formData.shareholders.length > 1 && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => removeArrayItem('shareholders', index)}
-                            >
-                              Remove
-                            </Button>
-                          )}
+
+              <div className="space-y-6">
+                <div className="relative">
+                  <Input
+                    key="business-type-input"
+                    placeholder="Type your business type..."
+                    value={businessType}
+                    onChange={(e) => handleBusinessTypeChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setShowSuggestions(businessType.length > 0)}
+                    className="w-full h-12 md:h-14 text-base md:text-lg rounded-xl border-2 focus:border-primary"
+                  />
+                  
+                  {showSuggestions && filteredSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-card border border-border rounded-xl shadow-lg animate-fade-in">
+                      {filteredSuggestions.map((suggestion, index) => (
+                        <div
+                          key={index}
+                          className={`p-3 cursor-pointer transition-all duration-200 first:rounded-t-xl last:rounded-b-xl ${
+                            index === selectedSuggestionIndex 
+                              ? 'bg-gradient-to-r from-accent/15 to-background/80 text-accent' 
+                              : 'hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80'
+                          }`}
+                          onClick={() => selectSuggestion(suggestion)}
+                        >
+                          {suggestion}
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              <p className="text-sm text-gray-600">
-                Total shareholding: {formData.shareholders.reduce((sum, s) => sum + (s.share_percentage || 0), 0)}%
-              </p>
-            </div>
+                  )}
+                </div>
 
-            {/* Directors */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Directors</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => addArrayItem('directors', { full_name: '', nationality: '', passport_number: '' })}
-                >
-                  Add Director
-                </Button>
+                <div className="flex gap-4">
+                  <Button
+                    onClick={handleBack}
+                    variant="outline"
+                    className="h-12 md:h-14 px-6 text-base md:text-lg font-semibold rounded-xl border-2 hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80 hover:border-accent/50 transition-all duration-300"
+                  >
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!businessType}
+                    data-next-button="true"
+                    className="flex-1 h-12 md:h-14 text-base md:text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 transition-all duration-200"
+                  >
+                    Next Step
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
               </div>
-              
-              {formData.directors.map((director, index) => (
-                <Card key={index} className="mb-4">
-                  <CardContent className="pt-6">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Full Name *</Label>
-                        <Input
-                          value={director.full_name}
-                          onChange={(e) => handleArrayFieldChange('directors', index, 'full_name', e.target.value)}
-                          placeholder="Full name as in passport"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nationality *</Label>
-                        <Input
-                          value={director.nationality}
-                          onChange={(e) => handleArrayFieldChange('directors', index, 'nationality', e.target.value)}
-                          placeholder="Nationality"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Passport Number *</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={director.passport_number}
-                            onChange={(e) => handleArrayFieldChange('directors', index, 'passport_number', e.target.value)}
-                            placeholder="Passport number"
-                          />
-                          {formData.directors.length > 1 && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => removeArrayItem('directors', index)}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+            </>
+          )}
+
+          {currentStep === 3 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+                  Number of Shareholders?
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  How many shareholders will your company have?
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-center space-x-4 p-4 md:p-6 border rounded-lg bg-muted/30 max-w-md mx-auto">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setNumberOfShareholders(Math.max(1, numberOfShareholders - 1))}
+                    className="h-8 w-8"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center min-w-[80px]">
+                    <div className="text-xl md:text-2xl font-bold">{numberOfShareholders}</div>
+                    <div className="text-xs text-muted-foreground">shareholder{numberOfShareholders !== 1 ? 's' : ''}</div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setNumberOfShareholders(Math.min(10, numberOfShareholders + 1))}
+                    className="h-8 w-8"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    onClick={handleBack}
+                    variant="outline"
+                    className="h-12 md:h-14 px-6 text-base md:text-lg font-semibold rounded-xl border-2 hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80 hover:border-accent/50 transition-all duration-300"
+                  >
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1 h-12 md:h-14 text-base md:text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 transition-all duration-200"
+                  >
+                    Next Step
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep === 4 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+                  Authentication Required
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Please sign in to continue with your company formation
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="text-center p-6 border rounded-xl bg-gradient-to-r from-accent/5 to-background/80">
+                  <p className="text-lg font-medium mb-2">Authentication will be integrated here</p>
+                  <p className="text-muted-foreground">Clerk authentication integration pending</p>
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    onClick={handleBack}
+                    variant="outline"
+                    className="h-12 md:h-14 px-6 text-base md:text-lg font-semibold rounded-xl border-2 hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80 hover:border-accent/50 transition-all duration-300"
+                  >
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    className="flex-1 h-12 md:h-14 text-base md:text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 transition-all duration-200"
+                  >
+                    Next Step
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {currentStep === 5 && (
+            <>
+              <div className="text-center mb-8">
+                <h1 className="text-2xl md:text-3xl font-heading font-bold mb-3">
+                  Company Name?
+                </h1>
+                <p className="text-muted-foreground text-base md:text-lg">
+                  Enter your proposed company name
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      key="company-name-input"
+                      placeholder="Your company name"
+                      value={companyName}
+                      onChange={(e) => handleCompanyNameChange(e.target.value)}
+                      className={`flex-1 h-12 md:h-14 text-base md:text-lg rounded-xl border-2 focus:border-primary ${
+                        companyName.length >= 3 && !nameValidation.isValid ? 'border-red-500 focus:border-red-500' : ''
+                      }`}
+                    />
+                    <div className="px-4 py-3 bg-muted rounded-xl border-2 border-border">
+                      <span className="text-base md:text-lg font-medium text-muted-foreground">FZCO</span>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={prevStep}>
-                Previous: Company Information
-              </Button>
-              <Button onClick={nextStep}>
-                Next: Review & Submit
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3: Review & Submit */}
-      {currentStep === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 3: Review & Submit</CardTitle>
-            <CardDescription>Review your information and submit the application</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Company Information Review */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Company Information</h3>
-              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                <p><strong>Company Name:</strong> {formData.name}</p>
-                {formData.trade_name && <p><strong>Trade Name:</strong> {formData.trade_name}</p>}
-                <p><strong>Free Zone:</strong> {FREE_ZONES[formData.free_zone as keyof typeof FREE_ZONES]}</p>
-                <p><strong>Business Activity:</strong> {formData.business_activity}</p>
-                <p><strong>Description:</strong> {formData.business_description}</p>
-              </div>
-            </div>
-
-            {/* Shareholders Review */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Shareholders</h3>
-              <div className="space-y-3">
-                {formData.shareholders.map((shareholder, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <p><strong>{shareholder.full_name}</strong> ({shareholder.nationality})</p>
-                    <p>Passport: {shareholder.passport_number} • Share: {shareholder.share_percentage}%</p>
                   </div>
-                ))}
-              </div>
-            </div>
+                  
+                  {/* Validation Errors */}
+                  {companyName.length >= 3 && nameValidation.errors.length > 0 && (
+                    <div className="space-y-2">
+                      {nameValidation.errors.map((error, index) => (
+                        <p key={index} className="text-sm text-red-500 flex items-center">
+                          <span className="w-1 h-1 bg-red-500 rounded-full mr-2"></span>
+                          {error}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Success Message */}
+                  {companyName.length >= 3 && nameValidation.isValid && (
+                    <p className="text-sm text-green-600 flex items-center">
+                      <span className="w-1 h-1 bg-green-600 rounded-full mr-2"></span>
+                      Company name is valid
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-sm text-muted-foreground text-center">
+                  You'll be creating an FZCO company in the IFZA Free Zone
+                </p>
 
-            {/* Directors Review */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Directors</h3>
-              <div className="space-y-3">
-                {formData.directors.map((director, index) => (
-                  <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                    <p><strong>{director.full_name}</strong> ({director.nationality})</p>
-                    <p>Passport: {director.passport_number}</p>
-                  </div>
-                ))}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button
+                    onClick={handleBack}
+                    variant="outline"
+                    className="h-12 md:h-14 px-4 sm:px-6 text-sm sm:text-base md:text-lg font-semibold rounded-xl border-2 hover:bg-gradient-to-r hover:from-accent/8 hover:to-background/80 hover:border-accent/50 transition-all duration-300 order-2 sm:order-1"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4 md:h-5 md:w-5" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={!companyName || !nameValidation.isValid}
+                    className="flex-1 h-12 md:h-14 text-sm sm:text-base md:text-lg font-semibold rounded-xl bg-primary hover:bg-primary/90 transition-all duration-200 order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Complete Setup
+                    <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            </>
+          )}
+        </div>
 
-            {/* Next Steps Info */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-900 mb-2">Next Steps After Submission:</h4>
-              <ul className="text-blue-800 text-sm space-y-1">
-                <li>• Document upload (passports, utility bills, NOC letters)</li>
-                <li>• Application review by CSP team</li>
-                <li>• Payment processing (Government fee: 2,500 AED + Service fee: 500 AED)</li>
-                <li>• Automated IFZA portal submission</li>
-                <li>• License issuance and delivery</li>
-              </ul>
-            </div>
-            
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={prevStep}>
-                Previous: Shareholders & Directors
-              </Button>
-              <Button onClick={handleSubmit} className="bg-gradient-to-r from-orange-500 to-gray-400 hover:from-orange-600 hover:to-gray-500">
-                Submit Application
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Footer */}
+        <div className="flex flex-col items-center gap-4 mt-6">
+          <div className="text-center">
+            <p className="text-sm font-medium text-muted-foreground">
+              Step {currentStep} of 5
+            </p>
+            <p className="text-sm text-muted-foreground">
+              No markups, transparent pricing
+            </p>
+          </div>
+          
+          <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

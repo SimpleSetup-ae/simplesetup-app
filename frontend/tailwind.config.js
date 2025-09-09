@@ -63,6 +63,7 @@ module.exports = {
       fontFamily: {
         'merriweather': ['var(--font-merriweather)', 'serif'],
         'inter': ['var(--font-inter)', 'sans-serif'],
+        'lora': ['var(--font-lora)', 'serif'],
         sans: ['var(--font-inter)', 'sans-serif'],
       },
       keyframes: {

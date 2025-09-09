@@ -232,7 +232,10 @@ export default async function DashboardPage() {
                 
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/companies/${company.id}`}>View</Link>
+                    <Link href={`/companies/${company.id}/dashboard`}>Dashboard</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/companies/${company.id}`}>Details</Link>
                   </Button>
                   {company.status === 'in_progress' && (
                     <Button size="sm" asChild>

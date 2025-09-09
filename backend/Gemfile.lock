@@ -126,6 +126,7 @@ GEM
     erb (4.0.4)
       cgi (>= 0.3.3)
     erubi (1.13.1)
+    event_stream_parser (1.0.0)
     factory_bot (6.5.5)
       activesupport (>= 6.1.0)
     factory_bot_rails (6.5.0)
@@ -279,6 +280,10 @@ GEM
       rspec-mocks (~> 3.13)
       rspec-support (~> 3.13)
     rspec-support (3.13.5)
+    ruby-openai (6.5.0)
+      event_stream_parser (>= 0.3.0, < 2.0.0)
+      faraday (>= 1)
+      faraday-multipart (>= 1)
     securerandom (0.4.1)
     sidekiq (7.3.9)
       base64
@@ -295,6 +300,7 @@ GEM
     uniform_notifier (1.18.0)
     uri (1.0.3)
     uuidtools (3.0.0)
+    webrick (1.9.1)
     websocket-driver (0.8.0)
       base64
       websocket-extensions (>= 0.1.0)
@@ -326,10 +332,12 @@ DEPENDENCIES
   rails (~> 7.1.0)
   redis (~> 5.0)
   rspec-rails
+  ruby-openai (~> 6.3)
   sidekiq (~> 7.0)
   stripe
   tzinfo-data
   uuidtools
+  webrick (~> 1.8)
 
 RUBY VERSION
    ruby 3.1.4p223

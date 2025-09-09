@@ -1,0 +1,150 @@
+class CreatePricingTables < ActiveRecord::Migration[7.1]
+  def change
+    # Main pricing catalog table
+    create_table :pricing_catalogs, id: :uuid do |t|
+      t.references :freezone, null: false, foreign_key: true, type: :uuid
+      t.string :currency, null: false, default: 'AED'
+      t.string :version, null: false, default: '1.0'
+      t.text :description
+      t.jsonb :terms, default: []
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :effective_from
+      t.datetime :effective_until
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # License packages (main product offerings)
+    create_table :license_packages, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :package_type, null: false # 'Commercial', 'Professional', etc.
+      t.integer :duration_years, null: false
+      t.integer :visas_included, null: false, default: 0
+      t.decimal :price_vat_inclusive, precision: 10, scale: 2, null: false
+      t.decimal :price_vat_exclusive, precision: 10, scale: 2
+      t.decimal :vat_rate, precision: 5, scale: 4, default: 0.05
+      t.jsonb :included_services, default: []
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Business activity fees
+    create_table :business_activity_fees, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :code, null: false
+      t.string :label, null: false
+      t.text :description
+      t.decimal :price, precision: 10, scale: 2, null: false
+      t.string :currency, default: 'AED'
+      t.jsonb :conditions, default: {}
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Shareholding fees
+    create_table :shareholding_fees, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :code, null: false
+      t.string :label, null: false
+      t.text :description
+      t.decimal :price, precision: 10, scale: 2, null: false
+      t.string :currency, default: 'AED'
+      t.jsonb :conditions, default: {}
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Government fees
+    create_table :government_fees, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :code, null: false
+      t.string :label, null: false
+      t.text :description
+      t.decimal :price, precision: 10, scale: 2, null: false
+      t.string :currency, default: 'AED'
+      t.string :fee_type # 'initial', 'renewal', 'amendment'
+      t.jsonb :conditions, default: {}
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Other service fees (preapprovals, deposits, etc.)
+    create_table :service_fees, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :code, null: false
+      t.string :label, null: false
+      t.text :description
+      t.string :category # 'preapproval', 'deposit', 'visa', 'work_permit', 'document', 'amendment', 'cancellation', 'other', 'penalty'
+      t.decimal :price, precision: 10, scale: 2, null: false
+      t.string :currency, default: 'AED'
+      t.jsonb :conditions, default: {}
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Promotions and special offers
+    create_table :pricing_promotions, id: :uuid do |t|
+      t.references :pricing_catalog, null: false, foreign_key: true, type: :uuid
+      t.string :key, null: false
+      t.string :title, null: false
+      t.text :description
+      t.string :applies_to # 'new_licenses', 'renewals', 'all'
+      t.string :promotion_type # 'waived_fee', 'discount_percentage', 'discount_amount'
+      t.decimal :discount_value, precision: 10, scale: 2
+      t.datetime :valid_from
+      t.datetime :valid_until
+      t.jsonb :conditions, default: {}
+      t.jsonb :metadata, default: {}
+      t.boolean :active, default: true, null: false
+      t.datetime :deleted_at, index: true
+      
+      t.timestamps
+    end
+    
+    # Add indexes (freezone_id index is automatically created by foreign key reference)
+    add_index :pricing_catalogs, :active
+    add_index :pricing_catalogs, :effective_from
+    add_index :pricing_catalogs, :effective_until
+    
+    # pricing_catalog_id indexes are automatically created by foreign key references
+    add_index :license_packages, :package_type
+    add_index :license_packages, :duration_years
+    add_index :license_packages, :active
+    
+    add_index :business_activity_fees, :code
+    add_index :business_activity_fees, :active
+    
+    add_index :shareholding_fees, :code
+    add_index :shareholding_fees, :active
+    
+    add_index :government_fees, :code
+    add_index :government_fees, :fee_type
+    add_index :government_fees, :active
+    
+    add_index :service_fees, :code
+    add_index :service_fees, :category
+    add_index :service_fees, :active
+    add_index :pricing_promotions, :key
+    add_index :pricing_promotions, :applies_to
+    add_index :pricing_promotions, :active
+    add_index :pricing_promotions, :valid_from
+    add_index :pricing_promotions, :valid_until
+  end
+end

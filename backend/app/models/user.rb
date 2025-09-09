@@ -4,6 +4,7 @@ class User < ApplicationRecord
   has_many :owned_companies, class_name: 'Company', foreign_key: 'owner_id', dependent: :destroy
   has_many :audit_logs, dependent: :destroy
   has_many :requests, foreign_key: 'requested_by_id', dependent: :destroy
+  has_many :notifications, dependent: :destroy
   
   validates :clerk_id, presence: true, uniqueness: true
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }

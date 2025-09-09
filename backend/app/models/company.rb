@@ -20,6 +20,7 @@ class Company < ApplicationRecord
   validates :name, presence: true
   validates :free_zone, presence: true
   validates :status, inclusion: { in: %w[draft in_progress pending_payment processing approved rejected issued] }
+  validates :formation_step, inclusion: { in: %w[draft business_activities company_details people_ownership documents submitted] }, allow_nil: true
   
   enum status: {
     draft: 'draft',
@@ -33,6 +34,8 @@ class Company < ApplicationRecord
   
   scope :active, -> { where.not(status: 'rejected') }
   scope :by_free_zone, ->(zone) { where(free_zone: zone) }
+  scope :by_formation_step, ->(step) { where(formation_step: step) }
+  scope :with_auto_save_data, -> { where.not(auto_save_data: {}) }
   
   after_create :create_billing_account
   after_create :start_formation_workflow
@@ -54,6 +57,74 @@ class Company < ApplicationRecord
   def can_be_accessed_by?(user)
     owner == user || members.include?(user)
   end
+
+  # Form data management methods
+  def form_data
+    formation_data || {}
+  end
+
+  def auto_save_form_data
+    auto_save_data || {}
+  end
+
+  def update_form_data(step_data, step_name = nil)
+    current_data = form_data.deep_dup
+    
+    if step_name
+      current_data[step_name] = step_data
+    else
+      current_data.merge!(step_data)
+    end
+    
+    update!(
+      formation_data: current_data,
+      formation_step: determine_current_step(current_data)
+    )
+  end
+
+  def auto_save_form_data!(step_data, step_name = nil)
+    current_auto_save = auto_save_form_data.deep_dup
+    
+    if step_name
+      current_auto_save[step_name] = step_data
+    else
+      current_auto_save.merge!(step_data)
+    end
+    
+    update!(
+      auto_save_data: current_auto_save,
+      last_auto_save_at: Time.current
+    )
+  end
+
+  def merge_auto_save_to_form_data!
+    return if auto_save_data.blank?
+    
+    merged_data = form_data.deep_merge(auto_save_data)
+    update!(
+      formation_data: merged_data,
+      formation_step: determine_current_step(merged_data),
+      auto_save_data: {},
+      last_auto_save_at: nil
+    )
+  end
+
+  def form_completion_percentage
+    return 0 if form_data.blank?
+    
+    required_fields = %w[business_activities company_names license_years visa_count]
+    completed_fields = required_fields.count { |field| form_data[field].present? }
+    
+    (completed_fields.to_f / required_fields.length * 100).round
+  end
+
+  def has_unsaved_changes?
+    auto_save_data.present? && last_auto_save_at.present?
+  end
+
+  def form_config_service
+    @form_config_service ||= CompanyFormation::ConfigService.new(freezone_config || free_zone)
+  end
   
   private
   
@@ -70,5 +141,13 @@ class Company < ApplicationRecord
       Rails.logger.error "Failed to start workflow for company #{id}: #{e.message}"
       # Don't raise the error to prevent company creation from failing
     end
+  end
+
+  def determine_current_step(data)
+    return 'business_activities' if data['business_activities'].blank?
+    return 'company_details' if data['company_names'].blank? || data['license_years'].blank?
+    return 'people_ownership' if data['shareholders'].blank?
+    return 'documents' if data['documents_uploaded'] != true
+    'submitted'
   end
 end

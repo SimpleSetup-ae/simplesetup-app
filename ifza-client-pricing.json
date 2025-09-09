@@ -1,0 +1,107 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "IFZA Pricing Catalog & Rules",
+    "type": "object",
+    "required": ["currency", "catalog", "promotions", "terms"],
+    "properties": {
+      "currency": { "type": "string", "const": "AED" },
+      "catalog": {
+        "type": "object",
+        "required": [
+          "license_packages",
+          "business_activity_fees",
+          "shareholding",
+          "preapprovals_and_deposits",
+          "gov_fees",
+          "visa",
+          "work_permits",
+          "documents_and_letters",
+          "amendments",
+          "cancellations",
+          "other_services",
+          "penalties"
+        ]
+      },
+      "promotions": { "type": "object" },
+      "terms": { "type": "array", "items": { "type": "string" } }
+    },
+    "currency": "AED",
+    "catalog": {
+      "license_packages": [
+        { "duration_years": 1, "package": "Commercial", "visas_included": 0, "price_vat_inclusive": 12900 },
+        { "duration_years": 1, "package": "Commercial", "visas_included": 1, "price_vat_inclusive": 14900 },
+        { "duration_years": 1, "package": "Commercial", "visas_included": 2, "price_vat_inclusive": 16900 },
+        { "duration_years": 1, "package": "Commercial", "visas_included": 3, "price_vat_inclusive": 18900 },
+        { "duration_years": 1, "package": "Commercial", "visas_included": 4, "price_vat_inclusive": 20900 },
+        { "duration_years": 1, "package": "Professional", "visas_included": 0, "price_vat_inclusive": 12900 },
+        { "duration_years": 1, "package": "Professional", "visas_included": 1, "price_vat_inclusive": 14900 },
+        { "duration_years": 1, "package": "Professional", "visas_included": 2, "price_vat_inclusive": 16900 },
+        { "duration_years": 1, "package": "Professional", "visas_included": 3, "price_vat_inclusive": 18900 },
+        { "duration_years": 1, "package": "Professional", "visas_included": 4, "price_vat_inclusive": 20900 },
+        { "duration_years": 2, "package": "Commercial", "visas_included": 0, "price_vat_inclusive": 21900 },
+        { "duration_years": 2, "package": "Commercial", "visas_included": 1, "price_vat_inclusive": 25300 },
+        { "duration_years": 2, "package": "Commercial", "visas_included": 2, "price_vat_inclusive": 28700 },
+        { "duration_years": 2, "package": "Commercial", "visas_included": 3, "price_vat_inclusive": 32100 },
+        { "duration_years": 2, "package": "Commercial", "visas_included": 4, "price_vat_inclusive": 35500 },
+        { "duration_years": 2, "package": "Professional", "visas_included": 0, "price_vat_inclusive": 21900 },
+        { "duration_years": 2, "package": "Professional", "visas_included": 1, "price_vat_inclusive": 25300 },
+        { "duration_years": 2, "package": "Professional", "visas_included": 2, "price_vat_inclusive": 28700 },
+        { "duration_years": 2, "package": "Professional", "visas_included": 3, "price_vat_inclusive": 32100 },
+        { "duration_years": 2, "package": "Professional", "visas_included": 4, "price_vat_inclusive": 35500 },
+        { "duration_years": 3, "package": "Commercial", "visas_included": 0, "price_vat_inclusive": 31000 },
+        { "duration_years": 3, "package": "Commercial", "visas_included": 1, "price_vat_inclusive": 35800 },
+        { "duration_years": 3, "package": "Commercial", "visas_included": 2, "price_vat_inclusive": 40600 },
+        { "duration_years": 3, "package": "Commercial", "visas_included": 3, "price_vat_inclusive": 45400 },
+        { "duration_years": 3, "package": "Commercial", "visas_included": 4, "price_vat_inclusive": 50200 },
+        { "duration_years": 3, "package": "Professional", "visas_included": 0, "price_vat_inclusive": 31000 },
+        { "duration_years": 3, "package": "Professional", "visas_included": 1, "price_vat_inclusive": 35800 },
+        { "duration_years": 3, "package": "Professional", "visas_included": 2, "price_vat_inclusive": 40600 },
+        { "duration_years": 3, "package": "Professional", "visas_included": 3, "price_vat_inclusive": 45400 },
+        { "duration_years": 3, "package": "Professional", "visas_included": 4, "price_vat_inclusive": 50200 },
+        { "duration_years": 5, "package": "Commercial", "visas_included": 0, "price_vat_inclusive": 45200 },
+        { "duration_years": 5, "package": "Commercial", "visas_included": 1, "price_vat_inclusive": 52200 },
+        { "duration_years": 5, "package": "Commercial", "visas_included": 2, "price_vat_inclusive": 59200 },
+        { "duration_years": 5, "package": "Commercial", "visas_included": 3, "price_vat_inclusive": 66200 },
+        { "duration_years": 5, "package": "Commercial", "visas_included": 4, "price_vat_inclusive": 73200 },
+        { "duration_years": 5, "package": "Professional", "visas_included": 0, "price_vat_inclusive": 45200 },
+        { "duration_years": 5, "package": "Professional", "visas_included": 1, "price_vat_inclusive": 52200 },
+        { "duration_years": 5, "package": "Professional", "visas_included": 2, "price_vat_inclusive": 59200 },
+        { "duration_years": 5, "package": "Professional", "visas_included": 3, "price_vat_inclusive": 66200 },
+        { "duration_years": 5, "package": "Professional", "visas_included": 4, "price_vat_inclusive": 73200 }
+      ],
+      "business_activity_fees": [
+        { "code": "activity.extra", "label": "Extra Business Activity", "price": 1000 },
+        { "code": "activity.cross", "label": "Cross Business Activity", "price": 2000 },
+        { "code": "activity.general_trading", "label": "General Trading", "price": 10000 },
+        { "code": "activity.single_family_office", "label": "Single Family Office Activity", "price": 10000 }
+      ],
+      "shareholding": [
+        { "code": "shareholder.individual_extra", "label": "Additional Individual Shareholder", "price": 350 },
+        { "code": "shareholder.corporate", "label": "Corporate Shareholder", "price": 750 }
+      ],
+      "preapprovals_and_deposits": [
+        { "code": "preapproval.name_reservation", "label": "License Pre-Approval / Name Reservation", "price": 500 },
+        { "code": "deposit.lock_in", "label": "License Downpayment", "price": 5000 }
+      ],
+      "gov_fees": [
+        { "code": "ecard.new", "label": "Establishment Card - Initial", "price": 2000 },
+        { "code": "ecard.renew", "label": "Establishment Card - Renewal", "price": 2200 },
+        { "code": "ecard.amend", "label": "Establishment Card - Amendment", "price": 500 }
+      ]
+    },
+    "promotions": {
+      "validity": { "applies_to": "new_licenses", "period": "August 2025 + next 3 renewals" },
+      "rules": [
+        { "key": "general_trading_waived", "description": "General Trading fee waived for new apps and 3 renewals" },
+        { "key": "cross_activity_waived", "description": "Cross Activity fee waived for new apps and 3 renewals" },
+        { "key": "upgrade_fee_waived", "description": "Upgrade amendment fee waived for life if licensed Aug 2025" }
+      ]
+    },
+    "terms": [
+      "Prices VAT inclusive",
+      "AED currency",
+      "Overstay fines = 400 + actual fine",
+      "3 activities and 3 shareholders included free"
+    ]
+  }
+  

@@ -1,6 +1,6 @@
 class Api::V1::CompaniesController < ApplicationController
-  before_action :set_company, only: [:show, :update, :workflow]
-  before_action :authorize_company_access, only: [:show, :update, :workflow]
+  before_action :set_company, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state]
+  before_action :authorize_company_access, only: [:show, :update, :workflow, :auto_save, :update_form_data, :merge_auto_save, :form_state]
   
   def index
     @companies = current_user.companies
@@ -79,6 +79,97 @@ class Api::V1::CompaniesController < ApplicationController
         progress: progress,
         current_step: progress[:current_step_instance] ? 
                       serialize_workflow_step(progress[:current_step_instance]) : nil
+      }
+    }
+  end
+
+  # PATCH /api/v1/companies/:id/auto_save
+  def auto_save
+    step_data = params[:step_data] || {}
+    step_name = params[:step_name]
+    
+    begin
+      @company.auto_save_form_data!(step_data, step_name)
+      
+      render json: {
+        success: true,
+        data: {
+          auto_saved: true,
+          last_auto_save_at: @company.last_auto_save_at,
+          form_completion_percentage: @company.form_completion_percentage,
+          current_step: @company.formation_step
+        }
+      }
+    rescue => e
+      render json: { 
+        success: false,
+        error: 'Auto-save failed', 
+        details: e.message 
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # POST /api/v1/companies/:id/form_data
+  def update_form_data
+    step_data = params[:step_data] || {}
+    step_name = params[:step_name]
+    
+    begin
+      @company.update_form_data(step_data, step_name)
+      
+      render json: {
+        success: true,
+        data: {
+          updated: true,
+          form_data: @company.form_data,
+          formation_step: @company.formation_step,
+          form_completion_percentage: @company.form_completion_percentage
+        }
+      }
+    rescue => e
+      render json: { 
+        success: false,
+        error: 'Form data update failed', 
+        details: e.message 
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # POST /api/v1/companies/:id/merge_auto_save
+  def merge_auto_save
+    begin
+      @company.merge_auto_save_to_form_data!
+      
+      render json: {
+        success: true,
+        data: {
+          merged: true,
+          form_data: @company.form_data,
+          formation_step: @company.formation_step,
+          has_unsaved_changes: @company.has_unsaved_changes?
+        }
+      }
+    rescue => e
+      render json: { 
+        success: false,
+        error: 'Merge auto-save failed', 
+        details: e.message 
+      }, status: :unprocessable_entity
+    end
+  end
+
+  # GET /api/v1/companies/:id/form_state
+  def form_state
+    render json: {
+      success: true,
+      data: {
+        form_data: @company.form_data,
+        auto_save_data: @company.auto_save_form_data,
+        formation_step: @company.formation_step,
+        form_completion_percentage: @company.form_completion_percentage,
+        has_unsaved_changes: @company.has_unsaved_changes?,
+        last_auto_save_at: @company.last_auto_save_at,
+        freezone_config: @company.freezone_config || @company.free_zone
       }
     }
   end

@@ -82,7 +82,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Logo */}
       <div className="p-6">
         <Link href="/dashboard" className="flex items-center space-x-2">
-          <div className="text-2xl font-merriweather font-bold text-orange-500">
+          <div className="text-2xl font-lora font-bold text-orange-500">
             SimpleSetup.ae
           </div>
         </Link>
