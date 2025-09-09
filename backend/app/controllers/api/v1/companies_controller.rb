@@ -196,7 +196,10 @@ class Api::V1::CompaniesController < ApplicationController
   
   def company_params
     params.require(:company).permit(
-      :name, :trade_name, :free_zone, 
+      :name, :trade_name, :free_zone, :website, :official_email, :phone,
+      :operating_name_arabic, :license_type, :first_license_issue_date,
+      :current_license_issue_date, :license_expiry_date, :establishment_card_number,
+      :establishment_card_issue_date, :establishment_card_expiry_date,
       activity_codes: []
     )
   end
@@ -223,13 +226,60 @@ class Api::V1::CompaniesController < ApplicationController
   def serialize_company_detailed(company)
     base_data = serialize_company(company)
     
+    # Get corporate tax registration
+    tax_registration = company.corporate_tax_registration
+    
     base_data.merge({
       activity_codes: company.activity_codes,
       metadata: company.metadata,
       members_count: company.company_memberships.accepted.count,
       documents_count: company.documents.count,
       current_workflow: company.current_workflow ? 
-                        serialize_workflow_instance(company.current_workflow) : nil
+                        serialize_workflow_instance(company.current_workflow) : nil,
+      
+      # Company tab specific fields
+      website: company.website,
+      official_email: company.official_email,
+      phone: company.phone,
+      contact_email: company.contact_email,
+      contact_phone: company.contact_phone,
+      operating_name_arabic: company.operating_name_arabic,
+      employee_visa_eligibility: company.employee_visa_eligibility,
+      
+      # License information
+      license_type: company.license_type,
+      license_status: company.license_status,
+      first_license_issue_date: company.first_license_issue_date&.iso8601,
+      current_license_issue_date: company.current_license_issue_date&.iso8601,
+      license_expiry_date: company.license_expiry_date&.iso8601,
+      establishment_card_number: company.establishment_card_number,
+      establishment_card_issue_date: company.establishment_card_issue_date&.iso8601,
+      establishment_card_expiry_date: company.establishment_card_expiry_date&.iso8601,
+      
+      # Tax registration information
+      tax_registration: tax_registration ? {
+        trn_number: tax_registration.trn_number,
+        status: tax_registration.status,
+        registration_date: tax_registration.registration_date&.iso8601,
+        needs_registration: company.needs_tax_registration?
+      } : {
+        trn_number: nil,
+        status: 'not_registered',
+        registration_date: nil,
+        needs_registration: true
+      },
+      tax_deadline: {
+        deadline_date: company.tax_registration_deadline&.iso8601,
+        days_remaining: company.days_until_tax_deadline,
+        status: company.tax_deadline_status
+      },
+      
+      # Document certificates
+      certificates: {
+        certificate_of_incorporation: company.certificate_of_incorporation ? serialize_document(company.certificate_of_incorporation) : nil,
+        commercial_license: company.commercial_license_document ? serialize_document(company.commercial_license_document) : nil,
+        register_of_directors: company.register_of_directors_document ? serialize_document(company.register_of_directors_document) : nil
+      }
     })
   end
   
@@ -258,6 +308,20 @@ class Api::V1::CompaniesController < ApplicationController
       started_at: workflow_step.started_at&.iso8601,
       completed_at: workflow_step.completed_at&.iso8601,
       error_message: workflow_step.error_message
+    }
+  end
+  
+  def serialize_document(document)
+    {
+      id: document.id,
+      name: document.name,
+      document_type: document.document_type,
+      file_name: document.file_name,
+      download_url: document.display_url,
+      thumbnail_url: document.display_url, # Can be enhanced with actual thumbnail generation
+      uploaded_at: document.uploaded_at&.iso8601,
+      file_size: document.file_size,
+      verified: document.verified
     }
   end
   

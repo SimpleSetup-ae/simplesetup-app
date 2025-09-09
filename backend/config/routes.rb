@@ -27,6 +27,13 @@ Rails.application.routes.draw do
           end
         end
         
+        # Tax registrations nested under companies
+        resources :tax_registrations do
+          member do
+            post :apply
+          end
+        end
+        
         # Nested workflow routes
         post 'workflow/start', to: 'workflows#start'
       end

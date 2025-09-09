@@ -21,6 +21,8 @@ class Company < ApplicationRecord
   validates :free_zone, presence: true
   validates :status, inclusion: { in: %w[draft in_progress pending_payment processing approved rejected issued] }
   validates :formation_step, inclusion: { in: %w[draft business_activities company_details people_ownership documents submitted] }, allow_nil: true
+  validates :official_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates :website, format: { with: URI::DEFAULT_PARSER.make_regexp(%w[http https]) }, allow_blank: true
   
   enum status: {
     draft: 'draft',
@@ -124,6 +126,80 @@ class Company < ApplicationRecord
 
   def form_config_service
     @form_config_service ||= CompanyFormation::ConfigService.new(freezone_config || free_zone)
+  end
+
+  # Tax registration deadline tracking
+  def tax_registration_deadline
+    created_at + 90.days
+  end
+
+  def days_until_tax_deadline
+    return nil unless created_at
+    (tax_registration_deadline - Date.current).to_i
+  end
+
+  def tax_deadline_status
+    days_remaining = days_until_tax_deadline
+    return 'unknown' unless days_remaining
+    
+    if days_remaining < 0
+      'overdue'
+    elsif days_remaining <= 30
+      'urgent'
+    elsif days_remaining <= 60
+      'warning'
+    else
+      'ok'
+    end
+  end
+
+  def corporate_tax_registration
+    tax_registrations.find_by(registration_type: 'corporate_tax')
+  end
+
+  def needs_tax_registration?
+    corporate_tax_registration.nil? || corporate_tax_registration.not_registered?
+  end
+
+  # License status mapping
+  def license_status
+    case status
+    when 'draft', 'in_progress', 'pending_payment', 'processing'
+      'setting_up'
+    when 'approved', 'issued'
+      'active'
+    when 'rejected'
+      'cancelled'
+    else
+      'setting_up'
+    end
+  end
+
+  # Employee visa eligibility from formation data
+  def employee_visa_eligibility
+    form_data.dig('visa_count') || 0
+  end
+
+  # Get company contact details from owner or formation data
+  def contact_email
+    official_email.presence || owner.email
+  end
+
+  def contact_phone
+    phone.presence || form_data.dig('shareholders', 0, 'mobile')
+  end
+
+  # Document helpers for certificates
+  def certificate_of_incorporation
+    documents.find_by(document_type: 'certificate_of_incorporation')
+  end
+
+  def commercial_license_document
+    documents.find_by(document_type: 'commercial_license')
+  end
+
+  def register_of_directors_document
+    documents.find_by(document_type: 'register_of_directors')
   end
   
   private

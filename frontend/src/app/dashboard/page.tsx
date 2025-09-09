@@ -1,8 +1,25 @@
 // Dashboard content will be wrapped by layout.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Link from 'next/link'
-import { Building2, FileText, Clock, CheckCircle, AlertCircle, TrendingUp, Calculator } from 'lucide-react'
+import { 
+  Building2, 
+  FileText, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  TrendingUp, 
+  Calculator,
+  Users,
+  Calendar,
+  Download,
+  Shield,
+  Timer,
+  AlertTriangle,
+  Bell
+} from 'lucide-react'
 
 // Temporarily disable auth check for testing
 export default async function DashboardPage() {
@@ -47,14 +64,86 @@ export default async function DashboardPage() {
     {
       id: '1',
       name: 'Sample Tech Solutions LLC',
+      trade_name: 'Sample Tech',
       free_zone: 'IFZA',
-      status: 'in_progress'
+      status: 'issued',
+      license_number: 'IFZA-2024-001234',
+      formation_progress: 100,
+      license_renewal_date: '2025-01-15',
+      shareholders: [
+        {
+          id: '1',
+          full_name: 'John Smith',
+          type: 'shareholder',
+          share_percentage: 60,
+          passport_number: 'A1234567',
+          passport_expiry_date: '2025-06-15',
+          expiry_status: 'warning'
+        },
+        {
+          id: '2',
+          full_name: 'Jane Doe',
+          type: 'director',
+          share_percentage: 40,
+          emirates_id: '784-1234-5678901-2',
+          emirates_id_expiry_date: '2026-03-20',
+          expiry_status: 'valid'
+        }
+      ],
+      documents: {
+        trade_license: 'https://example.com/trade-license.pdf',
+        moa: 'https://example.com/moa.pdf'
+      }
     },
     {
       id: '2', 
       name: 'Digital Marketing Co.',
       free_zone: 'DIFC',
-      status: 'completed'
+      status: 'in_progress',
+      formation_progress: 60,
+      shareholders: [
+        {
+          id: '3',
+          full_name: 'Ahmed Al-Rashid',
+          type: 'shareholder',
+          share_percentage: 100,
+          passport_number: 'B9876543',
+          passport_expiry_date: '2024-12-30',
+          expiry_status: 'critical'
+        }
+      ],
+      documents: {}
+    }
+  ]
+
+  // Mock notifications
+  const notifications = [
+    {
+      id: '1',
+      title: 'Passport Expiry Warning',
+      message: 'John Smith\'s passport expires in 45 days. Please renew to avoid issues.',
+      type: 'warning',
+      company_name: 'Sample Tech Solutions LLC',
+      created_at: '2024-01-10T10:00:00Z',
+      read: false
+    },
+    {
+      id: '2', 
+      title: 'Document Verification Complete',
+      message: 'All submitted documents have been verified successfully.',
+      type: 'success',
+      company_name: 'Digital Marketing Co.',
+      created_at: '2024-01-09T10:00:00Z',
+      read: false
+    },
+    {
+      id: '3',
+      title: 'Urgent: Passport Expires Soon',
+      message: 'Ahmed Al-Rashid\'s passport expires in 15 days. Immediate action required.',
+      type: 'error',
+      company_name: 'Digital Marketing Co.',
+      created_at: '2024-01-08T10:00:00Z',
+      read: false
     }
   ]
 
@@ -232,10 +321,7 @@ export default async function DashboardPage() {
                 
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/companies/${company.id}/dashboard`}>Dashboard</Link>
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/companies/${company.id}`}>Details</Link>
+                    <Link href={`/companies/${company.id}`}>View Details</Link>
                   </Button>
                   {company.status === 'in_progress' && (
                     <Button size="sm" asChild>
@@ -248,6 +334,232 @@ export default async function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Client-Specific Sections - Show detailed info for each company */}
+      {companies.map((company) => (
+        <div key={`details-${company.id}`} className="space-y-6">
+          <div className="flex items-center gap-3">
+            <Building2 className="h-6 w-6 text-orange-600" />
+            <h2 className="text-xl font-semibold">{company.name}</h2>
+            {company.license_number && (
+              <Badge variant="outline">{company.license_number}</Badge>
+            )}
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Documents Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Official Documents
+                </CardTitle>
+                <CardDescription>
+                  Access your company formation documents
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {company.documents?.trade_license ? (
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      <div>
+                        <p className="font-medium">Trade License</p>
+                        <p className="text-sm text-gray-600">Official business license</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={company.documents.trade_license} target="_blank">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">Trade License</p>
+                        <p className="text-sm text-gray-500">Pending issuance</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {company.documents?.moa ? (
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium">Memorandum of Association</p>
+                        <p className="text-sm text-gray-600">Company constitution</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={company.documents.moa} target="_blank">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-600">Memorandum of Association</p>
+                        <p className="text-sm text-gray-500">Being prepared</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* License Renewal Timer */}
+            {company.license_renewal_date && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    License Renewal
+                  </CardTitle>
+                  <CardDescription>
+                    Track your license renewal deadline
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center space-y-4">
+                    <div className="text-4xl font-bold text-green-600">
+                      {Math.ceil((new Date(company.license_renewal_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+                    </div>
+                    <p className="text-gray-600">days until renewal</p>
+                    <div className="space-y-2">
+                      <p className="text-sm">
+                        <strong>Renewal Date:</strong> {new Date(company.license_renewal_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Shareholders & Directors */}
+          {company.shareholders && company.shareholders.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Shareholders & Directors
+                </CardTitle>
+                <CardDescription>
+                  Company ownership and management structure
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {company.shareholders.map((person) => (
+                    <div key={person.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="font-medium">{person.full_name}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {person.type.charAt(0).toUpperCase() + person.type.slice(1)}
+                          </Badge>
+                          {person.share_percentage && (
+                            <Badge variant="secondary" className="text-xs">
+                              {person.share_percentage}% Share
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span>
+                              <strong>
+                                {person.passport_number ? 'Passport' : 'Emirates ID'}:
+                              </strong> {person.passport_number || person.emirates_id}
+                            </span>
+                            {(person.passport_expiry_date || person.emirates_id_expiry_date) && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Expires: {new Date(person.passport_expiry_date || person.emirates_id_expiry_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          <Badge className={`text-xs ${
+                            person.expiry_status === 'expired' ? 'bg-red-100 text-red-800' :
+                            person.expiry_status === 'critical' ? 'bg-red-100 text-red-800' :
+                            person.expiry_status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {person.expiry_status === 'expired' && 'Expired'}
+                            {person.expiry_status === 'critical' && 'Expires Soon'}
+                            {person.expiry_status === 'warning' && 'Expiring in 3 months'}
+                            {person.expiry_status === 'valid' && 'Valid'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ))}
+
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Recent Notifications
+            </CardTitle>
+            <CardDescription>
+              Important updates and reminders
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {notifications.map((notification) => (
+                <div 
+                  key={notification.id} 
+                  className={`flex items-start gap-3 p-3 rounded-lg border ${
+                    !notification.read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+                  }`}
+                >
+                  {notification.type === 'error' && <AlertCircle className="h-4 w-4 text-red-500 mt-0.5" />}
+                  {notification.type === 'warning' && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
+                  {notification.type === 'success' && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />}
+                  {notification.type === 'info' && <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5" />}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-medium">{notification.title}</p>
+                      {!notification.read && (
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">
+                        {notification.company_name} • {new Date(notification.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
