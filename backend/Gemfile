@@ -36,8 +36,14 @@ gem "bootsnap", require: false
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 gem "rack-cors"
 
-# Clerk authentication
-gem "clerk-sdk-ruby"
+# Devise authentication
+gem "devise"
+
+# OAuth authentication
+gem "omniauth"
+gem "omniauth-google-oauth2"
+gem "omniauth-linkedin-oauth2"
+gem "omniauth-rails_csrf_protection"
 
 # Background jobs
 gem "sidekiq", "~> 7.0"

@@ -97,10 +97,9 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   try {
     const response = await fetch(`${API_BASE_URL}/dashboard`, {
       method: 'GET',
+      credentials: 'include', // Include cookies for Devise session
       headers: {
         'Content-Type': 'application/json',
-        // In production, would include auth headers
-        // 'Authorization': `Bearer ${token}`
       },
     });
 
@@ -211,3 +210,4 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     };
   }
 }
+

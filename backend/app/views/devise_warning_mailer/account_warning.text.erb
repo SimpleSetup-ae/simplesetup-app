@@ -1,0 +1,34 @@
+SECURITY ALERT: Multiple Failed Login Attempts Detected
+========================================================
+
+Hello <%= @user.full_name || @user.email %>,
+
+We've detected 6 failed login attempts on your Simple Setup account associated with this email address.
+
+SECURITY INFORMATION:
+- Current failed attempts: 6 out of 10
+- Remaining attempts before account lock: <%= @remaining_attempts %>
+- Time: <%= Time.current.strftime("%B %d, %Y at %I:%M %p %Z") %>
+
+WHAT HAPPENS NEXT?
+If you reach 10 failed attempts, your account will be automatically locked for security purposes. You'll then need to use the "Unlock Account" link that will be sent to this email address.
+
+IF THIS WAS YOU:
+- Double-check your password and try logging in again
+- Consider using the "Forgot Password" link if you can't remember your password
+- Make sure you're using the correct email address
+
+IF THIS WASN'T YOU:
+- Someone may be trying to access your account
+- Consider changing your password immediately
+- Review your account security settings
+- Contact our support team if you have concerns
+
+Login to your account: https://simplesetup.ae/sign-in
+Reset your password: https://simplesetup.ae/users/password/new
+
+---
+This is an automated security notification from Simple Setup.
+If you have any questions, please contact our support team.
+
+Simple Setup - UAE Corporate Tax Registration Platform

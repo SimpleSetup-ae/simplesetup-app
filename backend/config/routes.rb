@@ -2,12 +2,20 @@ Rails.application.routes.draw do
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Devise routes for authentication
+  devise_for :users, controllers: {
+    sessions: 'users/sessions',
+    registrations: 'users/registrations',
+    omniauth_callbacks: 'users/omniauth_callbacks'
+  }
+
   # API routes
   namespace :api do
     namespace :v1 do
       # Authentication
-      post '/auth/sessions/verify', to: 'auth#verify'
-      post '/auth/webhooks/clerk', to: 'auth#clerk_webhook'
+      get '/auth/me', to: 'auth#me'
+      post '/auth/sign_in', to: 'auth#sign_in'
+      delete '/auth/sign_out', to: 'auth#sign_out'
       
       # Companies
       resources :companies do

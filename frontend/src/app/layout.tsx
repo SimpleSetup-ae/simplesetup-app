@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Merriweather, Lora } from 'next/font/google'
 import './globals.css'
+import { AuthProvider } from '@/components/auth/auth-provider'
 
 // Navigation removed - dashboard pages have their own sidebar navigation
 
@@ -36,11 +37,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${merriweather.variable} ${lora.variable}`}>
-              <body className={inter.className}>
+      <body className={inter.className}>
+        <AuthProvider>
           <div className="min-h-screen bg-gray-50">
             {children}
           </div>
-        </body>
+        </AuthProvider>
+      </body>
     </html>
   )
 }

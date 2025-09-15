@@ -7,7 +7,9 @@ puts "🌱 Starting database seeding..."
 seed_files = [
   'freezones',
   'ifza_pricing',
-  'business_activities'
+  'business_activities',
+  'sample_companies',
+  'demo_users'
 ]
 
 seed_files.each do |seed_file|

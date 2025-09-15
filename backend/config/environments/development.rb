@@ -32,9 +32,17 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.variant_processor = :mini_magick
 
-  # Don't care if the mailer can't send.
-  config.action_mailer.raise_delivery_errors = false
+  # Enable email delivery and error reporting for testing SendGrid
+  config.action_mailer.raise_delivery_errors = true
+  config.action_mailer.perform_deliveries = true
   config.action_mailer.perform_caching = false
+  
+  # Set default URL options for Devise mailer links
+  config.action_mailer.default_url_options = { 
+    host: 'localhost', 
+    port: 3000,
+    protocol: 'http'
+  }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
