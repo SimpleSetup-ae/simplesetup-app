@@ -27,16 +27,7 @@ module SimpleSetupApi
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    # CORS configuration
-    config.middleware.insert_before 0, Rack::Cors do
-      allow do
-        origins ENV.fetch("CORS_ORIGINS", "http://localhost:3000").split(",")
-        resource "*",
-          headers: :any,
-          methods: [:get, :post, :put, :patch, :delete, :options, :head],
-          credentials: true
-      end
-    end
+    # CORS configuration is in config/initializers/cors.rb
 
     # Session configuration for landing page capture
     config.middleware.use ActionDispatch::Cookies
