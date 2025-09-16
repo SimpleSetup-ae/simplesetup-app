@@ -51,6 +51,18 @@ backend/public/packs-test
 backend/.bundle/
 backend/vendor/bundle
 
+# Ruby gems and bundler cache (CRITICAL - prevents gem bloat)
+backend/gems/
+backend/cache/
+backend/specifications/
+backend/extensions/
+backend/plugins/
+backend/build_info/
+backend/doc/
+.bundle/
+vendor/bundle/
+vendor/cache/
+
 # Rails credentials
 backend/config/master.key
 backend/config/credentials.yml.enc
@@ -70,10 +82,23 @@ mobile/web-build/
 # Temporary files
 *.tmp
 *.temp
+*.swp
+*.swo
 
 # Database
 *.sqlite3
 *.db
+dump.rdb
+
+# Test files and scripts
+test_*.rb
+*_test.rb
+debug_*.sh
+test_*.sh
+final_*.sh
+mock_*.js
+create_demo_user.rb
+*cookies.txt
 
 # Secrets
 *.pem

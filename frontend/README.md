@@ -7,7 +7,7 @@ Next.js 14 web application with shadcn/ui components and Clerk authentication.
 - TypeScript
 - shadcn/ui components
 - Tailwind CSS
-- Clerk Authentication
+- Devise Authentication with OAuth
 - TanStack Query
 - Zod validation
 

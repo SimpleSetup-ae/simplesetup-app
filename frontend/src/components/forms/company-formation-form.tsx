@@ -441,7 +441,7 @@ export default function CompanyFormationForm() {
               <div className="space-y-6">
                 <div className="text-center p-6 border rounded-xl bg-gradient-to-r from-accent/5 to-background/80">
                   <p className="text-lg font-medium mb-2">Authentication will be integrated here</p>
-                  <p className="text-muted-foreground">Clerk authentication integration pending</p>
+                  <p className="text-muted-foreground">Secure authentication with Devise</p>
                 </div>
 
                 <div className="flex gap-4">

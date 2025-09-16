@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { useAuth } from '@/components/auth/auth-provider'
 import { 
   Building2, 
   LayoutDashboard, 
@@ -15,6 +16,21 @@ import {
   LogOut,
   FileText
 } from 'lucide-react'
+
+function LogoutButton() {
+  const { signOut } = useAuth()
+
+  return (
+    <Button 
+      variant="ghost" 
+      className="w-full justify-start gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+      onClick={signOut}
+    >
+      <LogOut className="h-4 w-4" />
+      Log Out
+    </Button>
+  )
+}
 
 interface SidebarProps {
   className?: string
@@ -156,17 +172,7 @@ export default function Sidebar({ className }: SidebarProps) {
 
         {/* Logout Button */}
         <div className="p-4">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            onClick={() => {
-              // In production, this would call Clerk's signOut
-              alert('Logout functionality - would integrate with Clerk')
-            }}
-          >
-            <LogOut className="h-4 w-4" />
-            Log Out
-          </Button>
+          <LogoutButton />
         </div>
       </div>
     </div>

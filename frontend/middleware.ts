@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  // Check if user is authenticated by looking for session cookie
-  const sessionCookie = request.cookies.get('_simple_setup_session')
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
   
   // Define protected routes
   const protectedRoutes = [
@@ -11,7 +10,12 @@ export function middleware(request: NextRequest) {
     '/companies',
     '/company-formation',
     '/documents',
-    '/billing'
+    '/billing',
+    '/settings',
+    '/users',
+    '/visas',
+    '/requests',
+    '/accounting'
   ]
   
   // Define public routes that don't require authentication
@@ -23,18 +27,43 @@ export function middleware(request: NextRequest) {
     '/business-activities'
   ]
   
-  const { pathname } = request.nextUrl
-  
   // Allow public routes
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
   
-  // Redirect to sign-in if accessing protected route without session
-  if (protectedRoutes.some(route => pathname.startsWith(route)) && !sessionCookie) {
-    const signInUrl = new URL('/sign-in', request.url)
-    signInUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(signInUrl)
+  // For protected routes, check authentication with backend
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    try {
+      // Check authentication with backend API
+      const response = await fetch(`http://localhost:3001/api/v1/auth/me`, {
+        headers: {
+          'Cookie': request.headers.get('cookie') || ''
+        }
+      })
+      
+      if (!response.ok) {
+        // Not authenticated, redirect to sign-in
+        const signInUrl = new URL('/sign-in', request.url)
+        signInUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(signInUrl)
+      }
+      
+      // Authenticated, allow access with security headers
+      const response = NextResponse.next()
+      
+      // Add security headers to prevent caching of protected pages
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+      response.headers.set('Pragma', 'no-cache')
+      response.headers.set('Expires', '0')
+      
+      return response
+    } catch (error) {
+      // Backend not available or error, redirect to sign-in for security
+      const signInUrl = new URL('/sign-in', request.url)
+      signInUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(signInUrl)
+    }
   }
   
   return NextResponse.next()
