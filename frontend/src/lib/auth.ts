@@ -27,7 +27,7 @@ interface AuthResponse {
   errors?: string[]
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
 
 async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any> {
   const url = `${API_BASE_URL}${endpoint}`
@@ -52,7 +52,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any
 }
 
 export async function signIn(email: string, password: string): Promise<User> {
-  const data = await apiCall('/api/v1/auth/sign_in', {
+  const data = await apiCall('/auth/sign_in', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
@@ -86,14 +86,14 @@ export async function signUp(userData: SignUpData): Promise<User> {
 }
 
 export async function signOut(): Promise<void> {
-  await apiCall('/api/v1/auth/sign_out', {
+  await apiCall('/auth/sign_out', {
     method: 'DELETE',
   })
 }
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    const data = await apiCall('/api/v1/auth/me')
+    const data = await apiCall('/auth/me')
     return data.success ? data.user : null
   } catch (error) {
     return null
@@ -109,6 +109,7 @@ export async function checkAuthStatus(): Promise<boolean> {
   }
 }
 
-// OAuth URLs
-export const getGoogleAuthUrl = () => `${API_BASE_URL}/users/auth/google_oauth2`
-export const getLinkedInAuthUrl = () => `${API_BASE_URL}/users/auth/linkedin`
+// OAuth URLs (these need the full backend URL, not API URL)
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:3001'
+export const getGoogleAuthUrl = () => `${BACKEND_URL}/users/auth/google_oauth2`
+export const getLinkedInAuthUrl = () => `${BACKEND_URL}/users/auth/linkedin`
