@@ -14,7 +14,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Authentication
       get '/auth/me', to: 'auth#me'
-      post '/auth/sign_in', to: 'auth#sign_in'
+      post '/auth/sign_in', to: 'auth#login'
       delete '/auth/sign_out', to: 'auth#sign_out'
       
       # Companies

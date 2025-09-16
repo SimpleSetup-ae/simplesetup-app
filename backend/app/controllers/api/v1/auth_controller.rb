@@ -1,5 +1,5 @@
 class Api::V1::AuthController < ApplicationController
-  skip_before_action :authenticate_request, only: [:sign_in]
+  skip_before_action :authenticate_user!, only: [:login]
   
   def me
     render json: {
@@ -8,11 +8,11 @@ class Api::V1::AuthController < ApplicationController
     }
   end
   
-  def sign_in
+  def login
     user = User.find_by(email: params[:email])
     
     if user&.valid_password?(params[:password])
-      sign_in(user)
+      sign_in :user, user
       render json: {
         success: true,
         message: 'Logged in successfully.',
