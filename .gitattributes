@@ -1,0 +1,25 @@
+# Treat vendored/generated content as non-diffable and vendored for GitHub linguist
+
+# Ruby/Bundler vendor and caches
+backend/gems/** -diff linguist-vendored
+backend/cache/** -diff linguist-vendored
+backend/specifications/** -diff linguist-vendored
+backend/extensions/** -diff linguist-vendored
+backend/plugins/** -diff linguist-vendored
+backend/build_info/** -diff linguist-vendored
+backend/doc/** -diff linguist-vendored
+
+# Node build output
+frontend/.next/** -diff linguist-generated
+frontend/dist/** -diff linguist-generated
+
+# Treat native bundles and binary artifacts as binary and ignore diffs
+*.bundle binary -diff
+*.png binary -diff
+*.jpg binary -diff
+*.jpeg binary -diff
+*.gif binary -diff
+*.svg -diff
+*.pdf binary -diff
+
+

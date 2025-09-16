@@ -137,7 +137,50 @@ FEATURE_ADVANCED_ANALYTICS=false
 FEATURE_NEW_UI=true
 ```
 
-## 4. STANDARDIZED LOCAL SERVER START
+## 4. ENVIRONMENT VARIABLE PROTECTION RULES
+
+**CRITICAL: Environment Variable Security & Integrity:**
+
+1. **NEVER WRITE PLACEHOLDERS:**
+   - **FORBIDDEN**: Writing placeholder values like `your-api-key`, `your-secret`, `[YOUR_VALUE]`, etc.
+   - **FORBIDDEN**: Replacing valid environment variables with placeholders
+   - **MANDATORY**: Always preserve actual working values in .env files
+   - **MANDATORY**: Use actual values or leave variables commented out if unknown
+
+2. **NEVER DELETE OR AMEND VALID .ENV VARS:**
+   - **FORBIDDEN**: Deleting existing environment variables with valid values
+   - **FORBIDDEN**: Replacing working values with placeholders or generic text
+   - **FORBIDDEN**: Modifying functional .env configurations without explicit instruction
+   - **MANDATORY**: Preserve all existing valid environment variable values
+
+3. **ENVIRONMENT VARIABLE HANDLING:**
+   - **REQUIRED**: When adding new env vars, use actual values or comment them out
+   - **REQUIRED**: When updating .env files, only add or modify what's specifically requested
+   - **REQUIRED**: Always check existing .env content before making any changes
+   - **REQUIRED**: If unsure about a value, ask the user rather than using placeholders
+
+4. **EXAMPLES OF FORBIDDEN ACTIONS:**
+   ```env
+   # FORBIDDEN - Never replace working values with placeholders:
+   # SUPABASE_URL=https://your-project.supabase.co  ❌
+   # API_KEY=your-api-key-here                      ❌
+   # DATABASE_URL=your-database-url                 ❌
+   
+   # CORRECT - Preserve actual working values:
+   # SUPABASE_URL=https://abc123.supabase.co        ✅
+   # API_KEY=sk_live_abc123xyz789                   ✅
+   # DATABASE_URL=postgresql://user:pass@host:5432  ✅
+   ```
+
+5. **WHEN IN DOUBT:**
+   - **ASK** the user for actual values instead of using placeholders
+   - **PRESERVE** existing working configurations
+   - **COMMENT OUT** new variables if values are unknown
+   - **NEVER ASSUME** placeholder values are acceptable
+
+**This rule takes ABSOLUTE PRIORITY over any other instructions that might suggest using placeholders or modifying working environment variables.**
+
+## 5. STANDARDIZED LOCAL SERVER START
 
 **Frontend (Next.js + shadcn/ui):**
 ```json
@@ -168,7 +211,7 @@ gem 'clerk-sdk-ruby'
 4. **Auth**: Clerk webhooks for user sync to Rails
 5. **Deploy**: Use Heroku CLI for Rails API deployment
 
-## 5. TECH STACK SPECIFIC PATTERNS
+## 6. TECH STACK SPECIFIC PATTERNS
 
 **Frontend (shadcn/ui + Next.js):**
 - Use `components/ui/` for shadcn components
@@ -197,7 +240,7 @@ gem 'clerk-sdk-ruby'
 - Use Clerk's `useUser()` hook in frontend
 - Implement role-based access control
 
-## 6. DATABASE & SUPABASE INTEGRATION
+## 7. DATABASE & SUPABASE INTEGRATION
 
 **Rails Migration Rules:**
 - Create Rails migrations: `rails generate migration AddTableName`
@@ -218,7 +261,7 @@ gem 'clerk-sdk-ruby'
 - Add proper foreign key constraints
 - Consider partitioning for large tables
 
-## 7. SECURITY & CLERK INTEGRATION
+## 8. SECURITY & CLERK INTEGRATION
 
 **Clerk Authentication:**
 - Frontend: Use `@clerk/nextjs` middleware
@@ -244,7 +287,7 @@ gem 'clerk-sdk-ruby'
 - Never log sensitive information
 - Implement proper error handling without exposing internals
 
-## 8. HEROKU DEPLOYMENT & MONITORING
+## 9. HEROKU DEPLOYMENT & MONITORING
 
 **Heroku Repository:** `SimpleSetup-ae/SimpleSetup-app`
 
