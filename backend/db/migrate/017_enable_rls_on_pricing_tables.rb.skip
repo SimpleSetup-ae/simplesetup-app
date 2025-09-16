@@ -1,0 +1,89 @@
+class EnableRlsOnPricingTables < ActiveRecord::Migration[7.1]
+  def up
+    # Enable RLS on all pricing-related tables
+    execute "ALTER TABLE pricing_catalogs ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE license_packages ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE business_activity_fees ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE shareholding_fees ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE government_fees ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE service_fees ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE pricing_promotions ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE freezones ENABLE ROW LEVEL SECURITY;"
+    
+    # Create policies for pricing_promotions (public read, authenticated write)
+    execute <<-SQL
+      CREATE POLICY "Enable read access for all users" ON "public"."pricing_promotions"
+      AS PERMISSIVE FOR SELECT TO public USING (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable insert for authenticated users only" ON "public"."pricing_promotions"
+      AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable update for authenticated users only" ON "public"."pricing_promotions"
+      AS PERMISSIVE FOR UPDATE TO authenticated USING (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable delete for authenticated users only" ON "public"."pricing_promotions"
+      AS PERMISSIVE FOR DELETE TO authenticated USING (true);
+    SQL
+    
+    # Create similar policies for other pricing tables (public read, authenticated write)
+    %w[pricing_catalogs license_packages business_activity_fees shareholding_fees government_fees service_fees].each do |table|
+      execute <<-SQL
+        CREATE POLICY "Enable read access for all users" ON "public"."#{table}"
+        AS PERMISSIVE FOR SELECT TO public USING (true);
+      SQL
+      
+      execute <<-SQL
+        CREATE POLICY "Enable insert for authenticated users only" ON "public"."#{table}"
+        AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (true);
+      SQL
+      
+      execute <<-SQL
+        CREATE POLICY "Enable update for authenticated users only" ON "public"."#{table}"
+        AS PERMISSIVE FOR UPDATE TO authenticated USING (true);
+      SQL
+      
+      execute <<-SQL
+        CREATE POLICY "Enable delete for authenticated users only" ON "public"."#{table}"
+        AS PERMISSIVE FOR DELETE TO authenticated USING (true);
+      SQL
+    end
+    
+    # Create policies for freezones (public read, authenticated write)
+    execute <<-SQL
+      CREATE POLICY "Enable read access for all users" ON "public"."freezones"
+      AS PERMISSIVE FOR SELECT TO public USING (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable insert for authenticated users only" ON "public"."freezones"
+      AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable update for authenticated users only" ON "public"."freezones"
+      AS PERMISSIVE FOR UPDATE TO authenticated USING (true);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable delete for authenticated users only" ON "public"."freezones"
+      AS PERMISSIVE FOR DELETE TO authenticated USING (true);
+    SQL
+  end
+  
+  def down
+    # Drop policies and disable RLS
+    %w[pricing_catalogs license_packages business_activity_fees shareholding_fees government_fees service_fees pricing_promotions freezones].each do |table|
+      execute "DROP POLICY IF EXISTS \"Enable read access for all users\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Enable insert for authenticated users only\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Enable update for authenticated users only\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Enable delete for authenticated users only\" ON \"public\".\"#{table}\";"
+      execute "ALTER TABLE #{table} DISABLE ROW LEVEL SECURITY;"
+    end
+  end
+end

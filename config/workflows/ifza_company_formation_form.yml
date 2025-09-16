@@ -1,0 +1,135 @@
+# IFZA Company Formation - Simple & Elegant
+# UX-focused configuration maintaining existing design principles
+
+freezone:
+  code: "IFZA"
+  name: "IFZA"
+  tagline: "Set up your Dubai company in minutes"
+  
+# Business rules specific to IFZA
+business_rules:
+  activities:
+    free_activities_count: 3
+    max_activities_count: 10
+    main_activity_required: true
+  
+  share_capital:
+    min_amount: 1000  # AED
+    max_without_bank_letter: 150000  # AED
+    min_share_value: 10  # AED
+    partner_visa_capital_multiplier: 48000  # AED per partner visa
+  
+  visas:
+    min_package: 1
+    max_package: 9
+    establishment_card_required_when_visas: true
+  
+  names:
+    min_options: 1
+    max_options: 3
+    min_single_word_length: 2
+    banned_tokens: ["dubai", "emirates"]
+    auto_translate_arabic: true
+
+# Simple 4-Step Flow - Optimal UX
+steps:
+  - id: "business_activities"
+    title: "What does your company do?"
+    subtitle: "Choose your business activities"
+    icon: "briefcase"
+    component: "business_activities"
+  
+  - id: "company_details" 
+    title: "Company details"
+    subtitle: "Name, structure, and visa needs"
+    icon: "building"
+    component: "company_setup"
+  
+  - id: "people_ownership"
+    title: "People & ownership"
+    subtitle: "Who's involved and who owns what"
+    icon: "users"
+    component: "people_management"
+  
+  - id: "documents"
+    title: "Upload documents"
+    subtitle: "Passport and supporting documents"
+    icon: "upload"
+    component: "document_upload"
+
+# Clean Component Definitions - High-Level Abstractions
+components:
+  business_activities:
+    search_placeholder: "Type what your business does..."
+    max_free_activities: 3
+    
+  company_setup:
+    name_options:
+      min: 1
+      max: 3
+      suffix: "FZCO"
+    license_duration:
+      options: [1, 2, 3, 4, 5]
+      default: 2
+    visa_package:
+      min: 1
+      max: 9
+      default: 1
+    share_capital:
+      min: 1000
+      default: 10000
+      bank_letter_threshold: 150000
+
+# Validation rules
+validation_rules:
+  banned_words:
+    tokens: ["dubai", "emirates"]
+    case_sensitive: false
+    
+  name_restrictions:
+    single_word_min_length: 2
+    
+  pep_policy:
+    hard_block: true
+    log_reason: "PEP_BLOCK"
+    
+  file_upload:
+    accepted_types: ["pdf", "jpg", "jpeg", "png"]
+    max_file_size: null  # No size limit
+
+# Internal fields (not visible to clients)
+internal_fields:
+  - "partner_name"
+  - "partner_id" 
+  - "partner_email"
+  - "quotation_type"
+  - "commission_plan"
+  - "application_date"
+  - "application_type"
+  - "license_type"
+
+# Application states
+application_states:
+  - state: "DRAFT"
+    label: "Draft"
+    description: "Application being prepared"
+    
+  - state: "SUBMITTED"
+    label: "Submitted"
+    description: "Application submitted for review"
+    
+  - state: "IN_REVIEW"
+    label: "In Review"
+    description: "Under compliance review"
+    
+  - state: "APPROVED"
+    label: "Approved"
+    description: "Ready for submission to IFZA"
+    
+  - state: "LODGED"
+    label: "Lodged"
+    description: "Submitted to IFZA"
+    
+  - state: "ISSUED"
+    label: "License Issued"
+    description: "Company license issued successfully"

@@ -1,0 +1,293 @@
+class EnableRlsOnCoreTables < ActiveRecord::Migration[7.1]
+  def up
+    # Enable RLS on all core business tables
+    execute "ALTER TABLE users ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE companies ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE company_memberships ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE documents ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE people ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE requests ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE workflow_instances ENABLE ROW LEVEL SECURITY;"
+    execute "ALTER TABLE workflow_steps ENABLE ROW LEVEL SECURITY;"
+    
+    # Users table - users can only see their own record
+    execute <<-SQL
+      CREATE POLICY "Users can view own profile" ON "public"."users"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (auth.uid()::text = clerk_id);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can update own profile" ON "public"."users"
+      AS PERMISSIVE FOR UPDATE TO authenticated 
+      USING (auth.uid()::text = clerk_id);
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Enable insert for authenticated users only" ON "public"."users"
+      AS PERMISSIVE FOR INSERT TO authenticated WITH CHECK (true);
+    SQL
+    
+    # Companies table - users can only see companies they own or are members of
+    execute <<-SQL
+      CREATE POLICY "Users can view companies they own or are members of" ON "public"."companies"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+        OR
+        id IN (
+          SELECT company_id FROM company_memberships 
+          WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          AND deleted_at IS NULL
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can insert companies as owner" ON "public"."companies"
+      AS PERMISSIVE FOR INSERT TO authenticated 
+      WITH CHECK (owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text));
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can update companies they own" ON "public"."companies"
+      AS PERMISSIVE FOR UPDATE TO authenticated 
+      USING (owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text));
+    SQL
+    
+    # Company memberships - users can see memberships for companies they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view memberships for accessible companies" ON "public"."company_memberships"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Company owners can manage memberships" ON "public"."company_memberships"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+        )
+      );
+    SQL
+    
+    # Documents - users can only see documents for companies they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view documents for accessible companies" ON "public"."documents"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can manage documents for accessible companies" ON "public"."documents"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    # People - users can only see people for companies they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view people for accessible companies" ON "public"."people"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can manage people for accessible companies" ON "public"."people"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    # Requests - users can only see requests for companies they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view requests for accessible companies" ON "public"."requests"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can manage requests for accessible companies" ON "public"."requests"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    # Workflow instances - users can only see workflows for companies they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view workflows for accessible companies" ON "public"."workflow_instances"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can manage workflows for accessible companies" ON "public"."workflow_instances"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        company_id IN (
+          SELECT id FROM companies WHERE 
+          owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+          OR
+          id IN (
+            SELECT company_id FROM company_memberships 
+            WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            AND deleted_at IS NULL
+          )
+        )
+      );
+    SQL
+    
+    # Workflow steps - users can only see steps for workflows they have access to
+    execute <<-SQL
+      CREATE POLICY "Users can view workflow steps for accessible workflows" ON "public"."workflow_steps"
+      AS PERMISSIVE FOR SELECT TO authenticated 
+      USING (
+        workflow_instance_id IN (
+          SELECT id FROM workflow_instances WHERE 
+          company_id IN (
+            SELECT id FROM companies WHERE 
+            owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            OR
+            id IN (
+              SELECT company_id FROM company_memberships 
+              WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+              AND deleted_at IS NULL
+            )
+          )
+        )
+      );
+    SQL
+    
+    execute <<-SQL
+      CREATE POLICY "Users can manage workflow steps for accessible workflows" ON "public"."workflow_steps"
+      AS PERMISSIVE FOR ALL TO authenticated 
+      USING (
+        workflow_instance_id IN (
+          SELECT id FROM workflow_instances WHERE 
+          company_id IN (
+            SELECT id FROM companies WHERE 
+            owner_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+            OR
+            id IN (
+              SELECT company_id FROM company_memberships 
+              WHERE user_id = (SELECT id FROM users WHERE clerk_id = auth.uid()::text)
+              AND deleted_at IS NULL
+            )
+          )
+        )
+      );
+    SQL
+  end
+  
+  def down
+    # Drop all policies and disable RLS
+    %w[users companies company_memberships documents people requests workflow_instances workflow_steps].each do |table|
+      execute "DROP POLICY IF EXISTS \"Users can view own profile\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can update own profile\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view companies they own or are members of\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can insert companies as owner\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can update companies they own\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view memberships for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Company owners can manage memberships\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view documents for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can manage documents for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view people for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can manage people for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view requests for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can manage requests for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view workflows for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can manage workflows for accessible companies\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can view workflow steps for accessible workflows\" ON \"public\".\"#{table}\";"
+      execute "DROP POLICY IF EXISTS \"Users can manage workflow steps for accessible workflows\" ON \"public\".\"#{table}\";"
+      execute "ALTER TABLE #{table} DISABLE ROW LEVEL SECURITY;"
+    end
+  end
+end
+

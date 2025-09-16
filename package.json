@@ -1,0 +1,26 @@
+{
+  "name": "simple-setup-corporate-tax-reg-agent",
+  "version": "1.0.0",
+  "description": "UAE Company Formation SaaS - Multi-company formation platform",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "mobile",
+    "automations",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "./start.sh",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "clean": "rm -rf node_modules && npm run clean --workspaces"
+  },
+  "keywords": ["uae", "company-formation", "saas", "automation"],
+  "author": "Simple Setup",
+  "license": "PROPRIETARY",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
