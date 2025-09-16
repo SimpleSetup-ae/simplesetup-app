@@ -3,7 +3,7 @@
 import Link from 'next/link'
 
 export default function Navigation() {
-  // Temporarily mock authentication state until Clerk is properly configured
+  // Authentication state managed by Devise
   const isSignedIn = false
   const user = null
 

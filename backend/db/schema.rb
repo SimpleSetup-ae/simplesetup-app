@@ -10,10 +10,33 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 18) do
+ActiveRecord::Schema[7.1].define(version: 22) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+
+  create_table "business_activities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "freezone", null: false
+    t.string "activity_code", null: false
+    t.string "activity_name", null: false
+    t.text "activity_description"
+    t.string "activity_type", null: false
+    t.string "property_requirements"
+    t.text "notes"
+    t.string "classification"
+    t.string "regulation_type", default: "Non-Regulated", null: false
+    t.string "approving_entity_1"
+    t.string "approving_entity_2"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["activity_code"], name: "index_business_activities_on_activity_code", unique: true
+    t.index ["activity_type"], name: "index_business_activities_on_activity_type"
+    t.index ["deleted_at"], name: "index_business_activities_on_deleted_at"
+    t.index ["freezone", "activity_type"], name: "index_business_activities_on_freezone_and_activity_type"
+    t.index ["freezone"], name: "index_business_activities_on_freezone"
+    t.index ["regulation_type"], name: "index_business_activities_on_regulation_type"
+  end
 
   create_table "companies", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
@@ -131,10 +154,14 @@ ActiveRecord::Schema[7.1].define(version: 18) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "passport_expiry_date"
+    t.date "passport_issue_date"
     t.index ["company_id", "type"], name: "index_people_on_company_id_and_type"
     t.index ["company_id"], name: "index_people_on_company_id"
     t.index ["deleted_at"], name: "index_people_on_deleted_at"
     t.index ["emirates_id"], name: "index_people_on_emirates_id"
+    t.index ["passport_expiry_date"], name: "index_people_on_passport_expiry_date"
+    t.index ["passport_issue_date"], name: "index_people_on_passport_issue_date"
     t.index ["passport_number"], name: "index_people_on_passport_number"
     t.index ["type"], name: "index_people_on_type"
   end
@@ -167,7 +194,6 @@ ActiveRecord::Schema[7.1].define(version: 18) do
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "clerk_id", null: false
     t.string "email", null: false
     t.string "first_name"
     t.string "last_name"
@@ -175,9 +201,32 @@ ActiveRecord::Schema[7.1].define(version: 18) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["clerk_id"], name: "index_users_on_clerk_id", unique: true
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.integer "sign_in_count", default: 0, null: false
+    t.datetime "current_sign_in_at"
+    t.datetime "last_sign_in_at"
+    t.string "current_sign_in_ip"
+    t.string "last_sign_in_ip"
+    t.string "confirmation_token"
+    t.datetime "confirmed_at"
+    t.datetime "confirmation_sent_at"
+    t.string "unconfirmed_email"
+    t.integer "failed_attempts", default: 0, null: false
+    t.string "unlock_token"
+    t.datetime "locked_at"
+    t.string "provider"
+    t.string "uid"
+    t.text "google_token"
+    t.text "linkedin_token"
+    t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
     t.index ["deleted_at"], name: "index_users_on_deleted_at"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
+    t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
   create_table "workflow_instances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

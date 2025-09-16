@@ -218,7 +218,7 @@ export default function HomePage() {
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                    Clerk authentication setup
+                    Devise authentication with Google & LinkedIn OAuth
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-orange-500 rounded-full"></span>

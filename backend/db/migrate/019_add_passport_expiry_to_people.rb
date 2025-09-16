@@ -8,3 +8,4 @@ class AddPassportExpiryToPeople < ActiveRecord::Migration[7.1]
     add_index :people, :passport_issue_date
   end
 end
+

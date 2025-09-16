@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Filter, Download, ExternalLink, Building, FileText, Globe, Shield } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Background } from '@/components/ui/background-dots-masked'
 import { Logo } from '@/components/ui/Logo'
 import Link from 'next/link'
-import { businessActivities, searchBusinessActivities, filterByType } from '@/lib/businessActivitiesData'
+// Use API for real data
 
 interface BusinessActivity {
   id: number;
@@ -24,36 +24,59 @@ export default function BusinessActivitiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
+  const [activities, setActivities] = useState<BusinessActivity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Filter and sort activities
-  const filteredActivities = useMemo(() => {
-    // First apply search filter
-    let filtered = searchBusinessActivities(searchQuery, businessActivities);
-    
-    // Then apply type filter
-    filtered = filterByType(filterType, filtered);
-
-    // Sort activities
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'code':
-          return a.activity_code.localeCompare(b.activity_code);
-        case 'type':
-          return a.activity_type.localeCompare(b.activity_type);
-        case 'name':
-        default:
-          return a.activity_name.localeCompare(b.activity_name);
+  // Load activities from API
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('search', searchQuery);
+        if (filterType !== 'all') params.append('activity_type', filterType);
+        params.append('per_page', '1000'); // Get all activities
+        
+        const response = await fetch(`/api/business-activities?${params}`);
+        const result = await response.json();
+        
+        if (result.data) {
+          let sortedData = [...result.data];
+          
+          // Sort activities
+          sortedData.sort((a, b) => {
+            switch (sortBy) {
+              case 'code':
+                return a.activity_code.localeCompare(b.activity_code);
+              case 'type':
+                return a.activity_type.localeCompare(b.activity_type);
+              case 'name':
+              default:
+                return a.activity_name.localeCompare(b.activity_name);
+            }
+          });
+          
+          setActivities(sortedData);
+          setTotalCount(result.meta?.total_count || sortedData.length);
+        }
+      } catch (error) {
+        console.error('Failed to load business activities:', error);
+      } finally {
+        setIsLoading(false);
       }
-    });
+    };
 
-    return filtered;
+    loadActivities();
   }, [searchQuery, filterType, sortBy]);
+
+  // For display purposes, use activities as filteredActivities
+  const filteredActivities = activities;
 
   // Get unique activity types for filter
   const activityTypes = useMemo(() => {
-    const types = businessActivities.map((activity: BusinessActivity) => activity.activity_type);
+    const types = activities.map((activity: BusinessActivity) => activity.activity_type);
     return Array.from(new Set(types)).filter(Boolean);
-  }, []);
+  }, [activities]);
 
   const exportToCSV = () => {
     const csvContent = [
@@ -166,7 +189,7 @@ export default function BusinessActivitiesPage() {
             
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
               <p className="text-muted-foreground">
-                Showing {filteredActivities.length} of {businessActivities.length} activities
+                {isLoading ? 'Loading...' : `Showing ${filteredActivities.length} of ${totalCount} activities`}
               </p>
               
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
