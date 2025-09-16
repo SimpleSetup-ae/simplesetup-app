@@ -11,9 +11,40 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[7.1].define(version: 22) do
+  create_schema "auth"
+  create_schema "extensions"
+  create_schema "graphql"
+  create_schema "graphql_public"
+  create_schema "pgbouncer"
+  create_schema "realtime"
+  create_schema "storage"
+  create_schema "vault"
+
   # These are extensions that must be enabled in order to support this database
+  enable_extension "pg_graphql"
+  enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
   enable_extension "plpgsql"
+  enable_extension "supabase_vault"
+  enable_extension "uuid-ossp"
+
+  create_table "billing_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.string "stripe_customer_id"
+    t.string "billing_email"
+    t.jsonb "billing_address", default: {}
+    t.string "default_payment_method_id"
+    t.decimal "account_balance", precision: 10, scale: 2, default: "0.0"
+    t.string "currency", default: "AED"
+    t.jsonb "metadata", default: {}
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_email"], name: "index_billing_accounts_on_billing_email"
+    t.index ["company_id"], name: "index_billing_accounts_on_company_id"
+    t.index ["deleted_at"], name: "index_billing_accounts_on_deleted_at"
+    t.index ["stripe_customer_id"], name: "index_billing_accounts_on_stripe_customer_id", unique: true
+  end
 
   create_table "business_activities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "freezone", null: false
@@ -38,6 +69,25 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["regulation_type"], name: "index_business_activities_on_regulation_type"
   end
 
+  create_table "business_activity_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "code", null: false
+    t.string "label", null: false
+    t.text "description"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.string "currency", default: "AED"
+    t.jsonb "conditions", default: {}
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_business_activity_fees_on_active"
+    t.index ["code"], name: "index_business_activity_fees_on_code"
+    t.index ["deleted_at"], name: "index_business_activity_fees_on_deleted_at"
+    t.index ["pricing_catalog_id"], name: "index_business_activity_fees_on_pricing_catalog_id"
+  end
+
   create_table "companies", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
     t.string "trade_name"
@@ -53,6 +103,30 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["deleted_at"], name: "index_companies_on_deleted_at"
     t.index ["license_number"], name: "index_companies_on_license_number", unique: true
     t.index ["owner_id"], name: "index_companies_on_owner_id"
+  end
+
+  create_table "company_invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.uuid "invited_by_id", null: false
+    t.string "email", null: false
+    t.string "role", default: "viewer", null: false
+    t.string "status", default: "pending", null: false
+    t.string "invitation_token", null: false
+    t.text "message"
+    t.datetime "invited_at"
+    t.datetime "accepted_at"
+    t.datetime "rejected_at"
+    t.datetime "expires_at"
+    t.jsonb "metadata", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "email"], name: "index_company_invitations_on_company_id_and_email", unique: true, where: "((status)::text = 'pending'::text)"
+    t.index ["company_id"], name: "index_company_invitations_on_company_id"
+    t.index ["email"], name: "index_company_invitations_on_email"
+    t.index ["expires_at"], name: "index_company_invitations_on_expires_at"
+    t.index ["invitation_token"], name: "index_company_invitations_on_invitation_token", unique: true
+    t.index ["invited_by_id"], name: "index_company_invitations_on_invited_by_id"
+    t.index ["status"], name: "index_company_invitations_on_status"
   end
 
   create_table "company_memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -137,6 +211,77 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["name"], name: "index_freezones_on_name"
   end
 
+  create_table "government_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "code", null: false
+    t.string "label", null: false
+    t.text "description"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.string "currency", default: "AED"
+    t.string "fee_type"
+    t.jsonb "conditions", default: {}
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_government_fees_on_active"
+    t.index ["code"], name: "index_government_fees_on_code"
+    t.index ["deleted_at"], name: "index_government_fees_on_deleted_at"
+    t.index ["fee_type"], name: "index_government_fees_on_fee_type"
+    t.index ["pricing_catalog_id"], name: "index_government_fees_on_pricing_catalog_id"
+  end
+
+  create_table "license_packages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "package_type", null: false
+    t.integer "duration_years", null: false
+    t.integer "visas_included", default: 0, null: false
+    t.decimal "price_vat_inclusive", precision: 10, scale: 2, null: false
+    t.decimal "price_vat_exclusive", precision: 10, scale: 2
+    t.decimal "vat_rate", precision: 5, scale: 4, default: "0.05"
+    t.jsonb "included_services", default: []
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_license_packages_on_active"
+    t.index ["deleted_at"], name: "index_license_packages_on_deleted_at"
+    t.index ["duration_years"], name: "index_license_packages_on_duration_years"
+    t.index ["package_type"], name: "index_license_packages_on_package_type"
+    t.index ["pricing_catalog_id"], name: "index_license_packages_on_pricing_catalog_id"
+  end
+
+  create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.uuid "workflow_step_id"
+    t.string "stripe_payment_intent_id"
+    t.string "payment_type", null: false
+    t.decimal "amount", precision: 10, scale: 2, null: false
+    t.string "currency", default: "AED", null: false
+    t.string "status", default: "pending", null: false
+    t.text "description"
+    t.jsonb "stripe_metadata", default: {}
+    t.jsonb "payment_breakdown", default: {}
+    t.datetime "paid_at"
+    t.datetime "failed_at"
+    t.text "failure_reason"
+    t.datetime "refunded_at"
+    t.decimal "refund_amount", precision: 10, scale: 2
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "status"], name: "index_payments_on_company_id_and_status"
+    t.index ["company_id"], name: "index_payments_on_company_id"
+    t.index ["deleted_at"], name: "index_payments_on_deleted_at"
+    t.index ["paid_at"], name: "index_payments_on_paid_at"
+    t.index ["payment_type"], name: "index_payments_on_payment_type"
+    t.index ["status"], name: "index_payments_on_status"
+    t.index ["stripe_payment_intent_id"], name: "index_payments_on_stripe_payment_intent_id", unique: true
+    t.index ["workflow_step_id"], name: "index_payments_on_workflow_step_id"
+  end
+
   create_table "people", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "company_id", null: false
     t.string "type", null: false
@@ -166,6 +311,51 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["type"], name: "index_people_on_type"
   end
 
+  create_table "pricing_catalogs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "freezone_id", null: false
+    t.string "currency", default: "AED", null: false
+    t.string "version", default: "1.0", null: false
+    t.text "description"
+    t.jsonb "terms", default: []
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "effective_from"
+    t.datetime "effective_until"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_pricing_catalogs_on_active"
+    t.index ["deleted_at"], name: "index_pricing_catalogs_on_deleted_at"
+    t.index ["effective_from"], name: "index_pricing_catalogs_on_effective_from"
+    t.index ["effective_until"], name: "index_pricing_catalogs_on_effective_until"
+    t.index ["freezone_id"], name: "index_pricing_catalogs_on_freezone_id"
+  end
+
+  create_table "pricing_promotions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "key", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "applies_to"
+    t.string "promotion_type"
+    t.decimal "discount_value", precision: 10, scale: 2
+    t.datetime "valid_from"
+    t.datetime "valid_until"
+    t.jsonb "conditions", default: {}
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_pricing_promotions_on_active"
+    t.index ["applies_to"], name: "index_pricing_promotions_on_applies_to"
+    t.index ["deleted_at"], name: "index_pricing_promotions_on_deleted_at"
+    t.index ["key"], name: "index_pricing_promotions_on_key"
+    t.index ["pricing_catalog_id"], name: "index_pricing_promotions_on_pricing_catalog_id"
+    t.index ["valid_from"], name: "index_pricing_promotions_on_valid_from"
+    t.index ["valid_until"], name: "index_pricing_promotions_on_valid_until"
+  end
+
   create_table "requests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "company_id", null: false
     t.uuid "requested_by_id", null: false
@@ -191,6 +381,75 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["requested_by_id"], name: "index_requests_on_requested_by_id"
     t.index ["status"], name: "index_requests_on_status"
     t.index ["submitted_at"], name: "index_requests_on_submitted_at"
+  end
+
+  create_table "service_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "code", null: false
+    t.string "label", null: false
+    t.text "description"
+    t.string "category"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.string "currency", default: "AED"
+    t.jsonb "conditions", default: {}
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_service_fees_on_active"
+    t.index ["category"], name: "index_service_fees_on_category"
+    t.index ["code"], name: "index_service_fees_on_code"
+    t.index ["deleted_at"], name: "index_service_fees_on_deleted_at"
+    t.index ["pricing_catalog_id"], name: "index_service_fees_on_pricing_catalog_id"
+  end
+
+  create_table "shareholding_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_catalog_id", null: false
+    t.string "code", null: false
+    t.string "label", null: false
+    t.text "description"
+    t.decimal "price", precision: 10, scale: 2, null: false
+    t.string "currency", default: "AED"
+    t.jsonb "conditions", default: {}
+    t.jsonb "metadata", default: {}
+    t.boolean "active", default: true, null: false
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_shareholding_fees_on_active"
+    t.index ["code"], name: "index_shareholding_fees_on_code"
+    t.index ["deleted_at"], name: "index_shareholding_fees_on_deleted_at"
+    t.index ["pricing_catalog_id"], name: "index_shareholding_fees_on_pricing_catalog_id"
+  end
+
+  create_table "tax_registrations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.string "registration_type", null: false
+    t.string "status", default: "not_registered", null: false
+    t.string "trn_number"
+    t.date "registration_date"
+    t.date "effective_date"
+    t.date "next_filing_date"
+    t.decimal "annual_turnover", precision: 15, scale: 2
+    t.string "tax_period"
+    t.jsonb "registration_details", default: {}
+    t.jsonb "filing_history", default: []
+    t.text "notes"
+    t.datetime "applied_at"
+    t.datetime "approved_at"
+    t.datetime "rejected_at"
+    t.text "rejection_reason"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id", "registration_type"], name: "index_tax_registrations_on_company_id_and_registration_type", unique: true
+    t.index ["company_id"], name: "index_tax_registrations_on_company_id"
+    t.index ["deleted_at"], name: "index_tax_registrations_on_deleted_at"
+    t.index ["next_filing_date"], name: "index_tax_registrations_on_next_filing_date"
+    t.index ["registration_type"], name: "index_tax_registrations_on_registration_type"
+    t.index ["status"], name: "index_tax_registrations_on_status"
+    t.index ["trn_number"], name: "index_tax_registrations_on_trn_number", unique: true, where: "(trn_number IS NOT NULL)"
   end
 
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -227,6 +486,43 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
+  end
+
+  create_table "visa_applications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.uuid "person_id", null: false
+    t.string "visa_type", null: false
+    t.string "status", default: "entry_permit", null: false
+    t.integer "current_stage", default: 1
+    t.integer "total_stages", default: 5
+    t.string "application_number"
+    t.string "entry_permit_number"
+    t.string "visa_number"
+    t.date "entry_permit_date"
+    t.date "medical_date"
+    t.date "eid_appointment_date"
+    t.date "stamping_date"
+    t.date "visa_issuance_date"
+    t.date "visa_expiry_date"
+    t.decimal "visa_fee", precision: 10, scale: 2
+    t.string "fee_currency", default: "AED"
+    t.jsonb "application_data", default: {}
+    t.jsonb "stage_history", default: []
+    t.text "notes"
+    t.datetime "submitted_at"
+    t.datetime "completed_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["application_number"], name: "index_visa_applications_on_application_number", unique: true, where: "(application_number IS NOT NULL)"
+    t.index ["company_id", "status"], name: "index_visa_applications_on_company_id_and_status"
+    t.index ["company_id"], name: "index_visa_applications_on_company_id"
+    t.index ["deleted_at"], name: "index_visa_applications_on_deleted_at"
+    t.index ["person_id"], name: "index_visa_applications_on_person_id"
+    t.index ["status"], name: "index_visa_applications_on_status"
+    t.index ["submitted_at"], name: "index_visa_applications_on_submitted_at"
+    t.index ["visa_number"], name: "index_visa_applications_on_visa_number", unique: true, where: "(visa_number IS NOT NULL)"
+    t.index ["visa_type"], name: "index_visa_applications_on_visa_type"
   end
 
   create_table "workflow_instances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -268,16 +564,31 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["workflow_instance_id"], name: "index_workflow_steps_on_workflow_instance_id"
   end
 
+  add_foreign_key "billing_accounts", "companies"
+  add_foreign_key "business_activity_fees", "pricing_catalogs"
   add_foreign_key "companies", "users", column: "owner_id"
+  add_foreign_key "company_invitations", "companies"
+  add_foreign_key "company_invitations", "users", column: "invited_by_id"
   add_foreign_key "company_memberships", "companies"
   add_foreign_key "company_memberships", "users"
   add_foreign_key "documents", "companies"
   add_foreign_key "documents", "people"
   add_foreign_key "documents", "users"
   add_foreign_key "documents", "workflow_steps"
+  add_foreign_key "government_fees", "pricing_catalogs"
+  add_foreign_key "license_packages", "pricing_catalogs"
+  add_foreign_key "payments", "companies"
+  add_foreign_key "payments", "workflow_steps"
   add_foreign_key "people", "companies"
+  add_foreign_key "pricing_catalogs", "freezones"
+  add_foreign_key "pricing_promotions", "pricing_catalogs"
   add_foreign_key "requests", "companies"
   add_foreign_key "requests", "users", column: "requested_by_id"
+  add_foreign_key "service_fees", "pricing_catalogs"
+  add_foreign_key "shareholding_fees", "pricing_catalogs"
+  add_foreign_key "tax_registrations", "companies"
+  add_foreign_key "visa_applications", "companies"
+  add_foreign_key "visa_applications", "people"
   add_foreign_key "workflow_instances", "companies"
   add_foreign_key "workflow_steps", "workflow_instances"
 end
