@@ -1,0 +1,47 @@
+name: Prevent repository bloat
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-bloat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect large files (>2MB) added in PR
+        run: |
+          set -e
+          git fetch origin ${{ github.base_ref }} --depth=1
+          base_ref=origin/${{ github.base_ref }}
+          added_files=$(git diff --name-only --diff-filter=A $base_ref...HEAD)
+          fail=0
+          for f in $added_files; do
+            if [ -f "$f" ]; then
+              size=$(wc -c < "$f")
+              if [ "$size" -gt 2097152 ]; then
+                echo "❌ Large file >2MB detected: $f ($size bytes)" >&2
+                fail=1
+              fi
+            fi
+          done
+          if [ "$fail" -eq 1 ]; then
+            echo "::error::Large files detected in PR. Remove or use LFS."
+            exit 1
+          fi
+
+      - name: Block vendored/gem paths in PR
+        run: |
+          set -e
+          git fetch origin ${{ github.base_ref }} --depth=1
+          base_ref=origin/${{ github.base_ref }}
+          disallowed_paths='^backend/(gems|cache|specifications|extensions|plugins|build_info|doc)/|^vendor/'
+          changed=$(git diff --name-only $base_ref...HEAD | grep -E "$disallowed_paths" || true)
+          if [ -n "$changed" ]; then
+            echo "::error::Disallowed paths modified in PR:\n$changed"
+            exit 1
+          fi
+
+
