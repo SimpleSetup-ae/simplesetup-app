@@ -14,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 12 6% 6%;
     
-    /* Primary Brand - Electric Blue */
-    --primary: 212 100% 50%;
+    /* Primary Brand - Warm Orange */
+    --primary: 21 100% 55%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 212 100% 60%;
+    --primary-light: 21 95% 65%;
     
-    /* Secondary - Light Blue Gray */
-    --secondary: 210 40% 96%;
+    /* Secondary - Soft Orange Tint */
+    --secondary: 21 20% 96%;
     --secondary-foreground: 12 6% 6%;
     
-    /* Accent - Bright Orange */
+    /* Accent - Deep Orange */
     --accent: 20 100% 54%;
     --accent-foreground: 0 0% 100%;
     --accent-light: 20 95% 65%;
@@ -58,7 +58,9 @@
     
     /* Custom Simple Setup design system variables */
     --gradient-text: linear-gradient(135deg, #000000 0%, #C0C0C0 100%);
-    --gradient-button: linear-gradient(135deg, #FFA500 0%, #C0C0C0 100%);
+    --gradient-button: linear-gradient(135deg, #FF6B35 0%, #FFA500 100%);
+    --gradient-card: linear-gradient(135deg, #FFFFFF 0%, #FFF7F0 100%);
+    --gradient-background: linear-gradient(135deg, #FFFFFF 0%, #FFF9F5 50%, #FFF2E8 100%);
   }
 
   .dark {
@@ -108,6 +110,14 @@
   
   .gradient-button {
     background: var(--gradient-button);
+  }
+  
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  
+  .gradient-background {
+    background: var(--gradient-background);
   }
   
   .animate-fade-in {

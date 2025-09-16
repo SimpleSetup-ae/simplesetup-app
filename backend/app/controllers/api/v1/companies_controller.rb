@@ -200,7 +200,7 @@ class Api::V1::CompaniesController < ApplicationController
       end
     end
     
-    # Update owner's email if provided (though email should come from Clerk)
+    # Update owner's email if provided (email managed by Devise)
     if permitted_params[:company_email].present? && current_user == @company.owner
       current_user.update!(email: permitted_params[:company_email])
     end

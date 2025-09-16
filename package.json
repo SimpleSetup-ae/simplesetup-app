@@ -16,11 +16,21 @@
     "lint": "npm run lint --workspaces",
     "clean": "rm -rf node_modules && npm run clean --workspaces"
   },
-  "keywords": ["uae", "company-formation", "saas", "automation"],
+  "keywords": [
+    "uae",
+    "company-formation",
+    "saas",
+    "automation"
+  ],
   "author": "Simple Setup",
   "license": "PROPRIETARY",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
   }
 }
