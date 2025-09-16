@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Read the CSV file
-const csvPath = path.join(__dirname, 'IFZA Business Activities - Sheet1.csv');
+const csvPath = path.join(__dirname, '..', 'data', 'IFZA Business Activities - Sheet1.csv');
 const csvContent = fs.readFileSync(csvPath, 'utf-8');
 
 // Parse CSV manually (simple approach)
@@ -135,7 +135,7 @@ GRANT SELECT ON business_activities TO authenticated;
 `;
 
 // Write the complete SQL file
-fs.writeFileSync(path.join(__dirname, 'complete_business_activities.sql'), sql);
+fs.writeFileSync(path.join(__dirname, 'sql', 'complete_business_activities.sql'), sql);
 
 console.log(`Generated SQL file with ${insertValues.length} business activities`);
 console.log('File saved as: complete_business_activities.sql');

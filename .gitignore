@@ -23,6 +23,7 @@ yarn-error.log*
 # Next.js build output
 frontend/.next/
 frontend/dist/
+frontend/tsconfig.tsbuildinfo
 
 # Runtime data
 pids

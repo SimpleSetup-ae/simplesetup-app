@@ -29,7 +29,7 @@ This is a monorepo containing multiple applications:
 
 3. **Start development environment**:
    ```bash
-   ./start.sh
+   ./scripts/start.sh
    ```
 
 This will start all services:
@@ -129,7 +129,7 @@ Copy `env.template` to `.env` and configure:
 
 ### Development
 ```bash
-./start.sh
+./scripts/start.sh
 ```
 
 ### Production
