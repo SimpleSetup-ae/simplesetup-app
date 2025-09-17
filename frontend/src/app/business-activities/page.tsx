@@ -22,18 +22,29 @@ interface BusinessActivity {
 
 export default function BusinessActivitiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('name');
   const [activities, setActivities] = useState<BusinessActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay for better UX
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // Load activities from API
   useEffect(() => {
     const loadActivities = async () => {
+      setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
+        if (debouncedSearchQuery) params.append('search', debouncedSearchQuery);
         if (filterType !== 'all') params.append('activity_type', filterType);
         params.append('per_page', '1000'); // Get all activities
         
@@ -43,18 +54,20 @@ export default function BusinessActivitiesPage() {
         if (result.data) {
           let sortedData = [...result.data];
           
-          // Sort activities
-          sortedData.sort((a, b) => {
-            switch (sortBy) {
-              case 'code':
-                return a.activity_code.localeCompare(b.activity_code);
-              case 'type':
-                return a.activity_type.localeCompare(b.activity_type);
-              case 'name':
-              default:
-                return a.activity_name.localeCompare(b.activity_name);
-            }
-          });
+          // Sort activities (only if no search query, as search results are already ranked)
+          if (!debouncedSearchQuery) {
+            sortedData.sort((a, b) => {
+              switch (sortBy) {
+                case 'code':
+                  return a.activity_code.localeCompare(b.activity_code);
+                case 'type':
+                  return a.activity_type.localeCompare(b.activity_type);
+                case 'name':
+                default:
+                  return a.activity_name.localeCompare(b.activity_name);
+              }
+            });
+          }
           
           setActivities(sortedData);
           setTotalCount(result.meta?.total_count || sortedData.length);
@@ -67,7 +80,7 @@ export default function BusinessActivitiesPage() {
     };
 
     loadActivities();
-  }, [searchQuery, filterType, sortBy]);
+  }, [debouncedSearchQuery, filterType, sortBy]);
 
   // For display purposes, use activities as filteredActivities
   const filteredActivities = activities;

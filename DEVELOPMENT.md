@@ -36,7 +36,7 @@ code .env  # or vim .env, nano .env, etc.
 ### 3. Start Development Services
 
 ```bash
-./start.sh
+./scripts/start.sh
 ```
 
 This will start all development services:
@@ -153,7 +153,7 @@ redis-cli flushall
 1. **Start your day**:
    ```bash
    source ./activate-env.sh
-   ./start.sh
+   ./scripts/start.sh
    ```
 
 2. **Make changes** in your preferred editor
@@ -195,7 +195,7 @@ If you encounter issues:
 1. Check this documentation
 2. Review error messages carefully
 3. Check service logs in the start.sh terminal
-4. Restart services: `./start.sh`
+4. Restart services: `./scripts/start.sh`
 5. Re-run environment setup: `./setup-environment.sh`
 
 ## 📚 Additional Resources

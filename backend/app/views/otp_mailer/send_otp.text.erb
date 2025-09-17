@@ -1,0 +1,18 @@
+SimpleSetup Verification Code
+
+Hello<%= @user.first_name ? " #{@user.first_name}" : '' %>,
+
+We received a request to sign in to your SimpleSetup account.
+
+Your verification code is: <%= @otp_code %>
+
+This code expires in <%= @expires_in %>.
+
+Enter this code on the verification page to continue with your application.
+
+Security Notice: If you didn't request this code, please ignore this email. Your account remains secure.
+
+---
+This is an automated message from SimpleSetup.
+Please do not reply to this email.
+© <%= Date.current.year %> SimpleSetup. All rights reserved.

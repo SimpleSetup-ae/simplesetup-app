@@ -23,4 +23,27 @@ class BusinessActivity < ApplicationRecord
   def commercial?
     activity_type == 'Commercial'
   end
+  
+  # First 3 business activities are free, additional ones incur fees
+  def self.is_free_activity?(activity_code, position = nil)
+    # If we know the position in the selection, first 3 are free
+    return position <= 3 if position
+    
+    # Otherwise check against common free activity codes
+    # This list can be configured based on business rules
+    free_activity_codes = [
+      'PROF-001', 'PROF-002', 'PROF-003',  # Common professional activities
+      'COMM-001', 'COMM-002', 'COMM-003'   # Common commercial activities
+    ]
+    
+    free_activity_codes.include?(activity_code)
+  end
+  
+  def requires_approval?
+    regulated? || approving_entity_1.present? || approving_entity_2.present?
+  end
+  
+  def approval_entities
+    [approving_entity_1, approving_entity_2].compact.reject(&:blank?)
+  end
 end

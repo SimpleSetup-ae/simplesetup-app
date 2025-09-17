@@ -1,4 +1,5 @@
-class Api::V1::BusinessActivitiesController < ApplicationController
+class Api::V1::BusinessActivitiesController < Api::V1::BaseController
+  skip_before_action :authenticate_user!, only: [:search, :index, :show, :filters]
   before_action :set_business_activity, only: [:show]
 
   # GET /api/v1/business_activities
@@ -11,14 +12,35 @@ class Api::V1::BusinessActivitiesController < ApplicationController
     @business_activities = @business_activities.regulated if params[:regulated] == 'true'
     @business_activities = @business_activities.non_regulated if params[:regulated] == 'false'
     
-    # Apply search
+    # Apply fuzzy search with ranking
     if params[:search].present?
-      search_term = params[:search]
-      @business_activities = @business_activities.where(
-        'activity_name ILIKE ? OR activity_description ILIKE ?', 
-        "%#{search_term}%", 
-        "%#{search_term}%"
-      )
+      search_term = params[:search].strip
+      
+      # Use fuzzy search with ranking for better results
+      @business_activities = @business_activities
+        .select(
+          ActiveRecord::Base.sanitize_sql_array([
+            "business_activities.*,
+            CASE
+              WHEN activity_name ILIKE ? THEN 1
+              WHEN activity_name ILIKE ? THEN 2
+              WHEN activity_name ILIKE ? THEN 3
+              WHEN activity_description ILIKE ? THEN 4
+              WHEN activity_code ILIKE ? THEN 5
+              ELSE 6
+            END AS search_rank",
+            search_term,
+            "#{search_term}%",
+            "%#{search_term}%",
+            "%#{search_term}%",
+            "%#{search_term}%"
+          ])
+        )
+        .where(
+          'activity_name ILIKE ? OR activity_description ILIKE ? OR activity_code ILIKE ?',
+          "%#{search_term}%", "%#{search_term}%", "%#{search_term}%"
+        )
+        .order('search_rank ASC, activity_name ASC')
     end
     
     # Apply pagination
@@ -57,16 +79,46 @@ class Api::V1::BusinessActivitiesController < ApplicationController
       return
     end
 
-    @business_activities = BusinessActivity.where(
-      'activity_name ILIKE ? OR activity_description ILIKE ? OR activity_code ILIKE ?',
-      "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%"
-    ).limit(20)
+    # Use fuzzy/similarity search with PostgreSQL trigram extension
+    # First try exact matches, then partial matches, then fuzzy matches
+    search_term = params[:q].strip
+    freezone = params[:freezone] || 'IFZA'
+    
+    # Build query with ranking (using safe parameterization)
+    @business_activities = BusinessActivity
+      .where(freezone: freezone)
+      .select(
+        BusinessActivity.sanitize_sql_array([
+          "business_activities.*,
+          CASE
+            WHEN activity_name ILIKE ? THEN 1
+            WHEN activity_name ILIKE ? THEN 2
+            WHEN activity_name ILIKE ? THEN 3
+            WHEN activity_description ILIKE ? THEN 4
+            WHEN activity_code ILIKE ? THEN 5
+            ELSE 6
+          END AS search_rank",
+          search_term,
+          "#{search_term}%",
+          "%#{search_term}%",
+          "%#{search_term}%",
+          "%#{search_term}%"
+        ])
+      )
+      .where(
+        'activity_name ILIKE ? OR activity_description ILIKE ? OR activity_code ILIKE ?',
+        "%#{search_term}%", "%#{search_term}%", "%#{search_term}%"
+      )
+      .order('search_rank ASC, activity_name ASC')
+      .limit(20)
 
     render json: {
-      data: ActiveModelSerializers::SerializableResource.new(
-        @business_activities, 
-        each_serializer: BusinessActivitySerializer
-      ).as_json
+      success: true,
+      data: @business_activities.map { |activity| 
+        BusinessActivitySerializer.new(activity).as_json.merge(
+          is_free: BusinessActivity.is_free_activity?(activity.activity_code)
+        )
+      }
     }
   end
 

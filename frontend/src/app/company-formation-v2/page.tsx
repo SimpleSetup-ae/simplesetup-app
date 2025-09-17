@@ -1,3 +1,9 @@
+/**
+ * @deprecated This is the OLD v2 company formation form.
+ * Please use the NEW production form at: /application/new
+ * This form will be removed in the next release.
+ */
+
 'use client'
 
 import { CompanyFormationWizard } from '@/components/forms/company-formation-v2'

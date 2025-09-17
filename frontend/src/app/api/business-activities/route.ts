@@ -68,52 +68,103 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const perPage = parseInt(searchParams.get('per_page') || '50');
 
-    // For now, use CSV data directly until Supabase is configured
-    let activities = loadBusinessActivitiesFromCSV();
+    // Use Rails API with Supabase database
+    const railsApiUrl = process.env.RAILS_API_URL || 'http://localhost:3001';
+    const params = new URLSearchParams();
     
-    // Apply filters
-    if (freezone) {
-      activities = activities.filter((activity: any) => 
-        activity.freezone.toLowerCase() === freezone.toLowerCase()
-      );
-    }
+    if (search) params.append('search', search);
+    if (freezone) params.append('freezone', freezone);
+    if (activityType) params.append('activity_type', activityType);
+    params.append('page', page.toString());
+    params.append('per_page', perPage.toString());
 
-    if (activityType) {
-      activities = activities.filter((activity: any) => 
-        activity.activity_type.toLowerCase() === activityType.toLowerCase()
-      );
-    }
-
-    if (search) {
-      const searchTerm = search.toLowerCase();
-      activities = activities.filter((activity: any) =>
-        activity.activity_name.toLowerCase().includes(searchTerm) ||
-        activity.activity_description.toLowerCase().includes(searchTerm) ||
-        activity.activity_code.toLowerCase().includes(searchTerm)
-      );
-    }
-
-    // Apply pagination
-    const total = activities.length;
-    const totalPages = Math.ceil(total / perPage);
-    const startIndex = (page - 1) * perPage;
-    const endIndex = startIndex + perPage;
-    const paginatedActivities = activities.slice(startIndex, endIndex);
-
-    return NextResponse.json({
-      data: paginatedActivities,
-      meta: {
-        current_page: page,
-        total_pages: totalPages,
-        total_count: total,
-        per_page: perPage
-      }
+    const response = await fetch(`${railsApiUrl}/api/v1/business_activities?${params}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      // Fallback to CSV data if Rails API is not available
+      console.warn('Rails API not available, falling back to CSV data');
+      let activities = loadBusinessActivitiesFromCSV();
+      
+      // Apply filters
+      if (freezone) {
+        activities = activities.filter((activity: any) => 
+          activity.freezone.toLowerCase() === freezone.toLowerCase()
+        );
+      }
+
+      if (activityType) {
+        activities = activities.filter((activity: any) => 
+          activity.activity_type.toLowerCase() === activityType.toLowerCase()
+        );
+      }
+
+      if (search) {
+        const searchTerm = search.toLowerCase();
+        activities = activities.filter((activity: any) =>
+          activity.activity_name.toLowerCase().includes(searchTerm) ||
+          activity.activity_description.toLowerCase().includes(searchTerm) ||
+          activity.activity_code.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Apply pagination
+      const total = activities.length;
+      const totalPages = Math.ceil(total / perPage);
+      const startIndex = (page - 1) * perPage;
+      const endIndex = startIndex + perPage;
+      const paginatedActivities = activities.slice(startIndex, endIndex);
+
+      return NextResponse.json({
+        data: paginatedActivities,
+        meta: {
+          current_page: page,
+          total_pages: totalPages,
+          total_count: total,
+          per_page: perPage
+        }
+      });
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+    
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to load business activities' },
-      { status: 500 }
-    );
+    
+    // Fallback to CSV data on any error
+    try {
+      let activities = loadBusinessActivitiesFromCSV();
+      const search = new URL(request.url).searchParams.get('search') || '';
+      
+      if (search) {
+        const searchTerm = search.toLowerCase();
+        activities = activities.filter((activity: any) =>
+          activity.activity_name.toLowerCase().includes(searchTerm) ||
+          activity.activity_description.toLowerCase().includes(searchTerm) ||
+          activity.activity_code.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      return NextResponse.json({
+        data: activities,
+        meta: {
+          current_page: 1,
+          total_pages: 1,
+          total_count: activities.length,
+          per_page: activities.length
+        }
+      });
+    } catch (fallbackError) {
+      console.error('Fallback error:', fallbackError);
+      return NextResponse.json(
+        { error: 'Failed to load business activities' },
+        { status: 500 }
+      );
+    }
   }
 }

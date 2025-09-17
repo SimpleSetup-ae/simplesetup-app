@@ -3,7 +3,7 @@ require 'csv'
 puts "Loading business activities data..."
 
 # Path to the CSV file
-csv_file_path = Rails.root.join('..', 'IFZA Business Activities - Sheet1.csv')
+csv_file_path = Rails.root.join('..', 'data', 'IFZA Business Activities - Sheet1.csv')
 
 unless File.exist?(csv_file_path)
   puts "CSV file not found at: #{csv_file_path}"
