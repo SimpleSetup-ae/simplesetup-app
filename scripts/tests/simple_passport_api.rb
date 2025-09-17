@@ -142,14 +142,14 @@ class PassportHandler < WEBrick::HTTPServlet::AbstractServlet
         },
         "processing": {
           "version": "v1",
-          "model": "gpt-4-turbo"
+          "model": "gpt-5"
         }
       }
       Return ONLY valid JSON, no explanations.
     PROMPT
     
     request.body = {
-      model: "gpt-4-turbo",
+      model: "gpt-5",
       messages: [
         { role: "system", content: system_prompt },
         {
@@ -205,7 +205,7 @@ class PassportHandler < WEBrick::HTTPServlet::AbstractServlet
           },
           "processing" => {
             "version" => "v1",
-            "model" => "gpt-4-turbo",
+            "model" => "gpt-5",
             "raw_response" => content[0..200]
           }
         }
