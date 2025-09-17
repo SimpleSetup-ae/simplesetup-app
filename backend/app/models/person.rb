@@ -8,11 +8,8 @@ class Person < ApplicationRecord
     numericality: { greater_than: 0, less_than_or_equal_to: 100 }, 
     if: :shareholder?
   
-  enum person_type: {
-    shareholder: 'shareholder',
-    director: 'director',
-    signatory: 'signatory'
-  }
+  # Note: Using 'type' column for person type, but Rails STI conflicts with enums on 'type' column
+  # So we use manual methods instead of enum
   
   scope :shareholders, -> { where(type: 'shareholder') }
   scope :directors, -> { where(type: 'director') }

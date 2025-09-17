@@ -37,8 +37,7 @@ export default function HomePage() {
                 📄 Document Processing
               </CardTitle>
               <CardDescription>
-                AI-powered OCR and document extraction using Google Gemini 2.5 Pro 
-                and OpenAI GPT-4o integration.
+                AI-powered document processing.
               </CardDescription>
             </CardHeader>
           </Card>

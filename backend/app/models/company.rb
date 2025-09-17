@@ -1,5 +1,5 @@
 class Company < ApplicationRecord
-  belongs_to :owner, class_name: 'User'
+  belongs_to :owner, class_name: 'User', optional: true # Optional for anonymous drafts
   has_many :company_memberships, dependent: :destroy
   has_many :members, through: :company_memberships, source: :user
   has_many :workflow_instances, dependent: :destroy
@@ -11,34 +11,56 @@ class Company < ApplicationRecord
   has_many :visa_applications, dependent: :destroy
   has_many :company_invitations, dependent: :destroy
   has_one :billing_account, dependent: :destroy
+  has_one :application_progress, dependent: :destroy, class_name: 'ApplicationProgress'
   
   # Specific person types
   has_many :shareholders, -> { where(type: 'shareholder') }, class_name: 'Person'
   has_many :directors, -> { where(type: 'director') }, class_name: 'Person'
   has_many :signatories, -> { where(type: 'signatory') }, class_name: 'Person'
   
-  validates :name, presence: true
+  # Updated status values to include new application flow statuses
+  STATUSES = %w[
+    anonymous_draft draft in_progress submitted under_review 
+    information_required pending_payment processing approved 
+    rejected issued formed active
+  ].freeze
+  
+  FORMATION_STEPS = %w[
+    start license activities names shareholding members ubos review submitted
+  ].freeze
+  
+  validates :name, presence: true, unless: :anonymous_draft?
   validates :free_zone, presence: true
-  validates :status, inclusion: { in: %w[draft in_progress pending_payment processing approved rejected issued] }
-  validates :formation_step, inclusion: { in: %w[draft business_activities company_details people_ownership documents submitted] }, allow_nil: true
+  validates :status, inclusion: { in: STATUSES }
+  validates :formation_step, inclusion: { in: FORMATION_STEPS }, allow_nil: true
+  validates :draft_token, uniqueness: true, allow_nil: true
   
   enum status: {
+    anonymous_draft: 'anonymous_draft',
     draft: 'draft',
     in_progress: 'in_progress',
+    submitted: 'submitted',
+    under_review: 'under_review',
+    information_required: 'information_required',
     pending_payment: 'pending_payment',
     processing: 'processing',
     approved: 'approved',
     rejected: 'rejected',
-    issued: 'issued'
+    issued: 'issued',
+    formed: 'formed',
+    active: 'active'
   }
   
-  scope :active, -> { where.not(status: 'rejected') }
+  scope :active, -> { where.not(status: ['rejected', 'anonymous_draft']) }
   scope :by_free_zone, ->(zone) { where(free_zone: zone) }
   scope :by_formation_step, ->(step) { where(formation_step: step) }
   scope :with_auto_save_data, -> { where.not(auto_save_data: {}) }
+  scope :anonymous_drafts, -> { where(status: 'anonymous_draft') }
+  scope :admin_viewable, -> { where(status: ['submitted', 'under_review', 'information_required', 'processing', 'approved', 'formed', 'active']) }
   
-  after_create :create_billing_account
-  after_create :start_formation_workflow
+  after_create :create_billing_account, unless: :anonymous_draft?
+  after_create :start_formation_workflow, unless: :anonymous_draft?
+  before_create :generate_draft_token, if: :anonymous_draft?
   
   def current_workflow
     workflow_instances.where(workflow_type: 'company_formation').order(created_at: :desc).first
@@ -55,12 +77,27 @@ class Company < ApplicationRecord
   end
   
   def can_be_accessed_by?(user)
+    return true if anonymous_draft? && draft_token.present?
+    return true if user&.is_admin?
     owner == user || members.include?(user)
+  end
+  
+  def anonymous_draft?
+    status == 'anonymous_draft'
+  end
+  
+  def claim_by_user!(user)
+    return false unless anonymous_draft?
+    update!(
+      owner: user,
+      status: 'draft',
+      draft_token: nil
+    )
   end
 
   # Form data management methods
   def form_data
-    formation_data || {}
+    auto_save_data || {}
   end
 
   def auto_save_form_data
@@ -77,7 +114,7 @@ class Company < ApplicationRecord
     end
     
     update!(
-      formation_data: current_data,
+      auto_save_data: current_data,
       formation_step: determine_current_step(current_data)
     )
   end
@@ -144,10 +181,19 @@ class Company < ApplicationRecord
   end
 
   def determine_current_step(data)
-    return 'business_activities' if data['business_activities'].blank?
-    return 'company_details' if data['company_names'].blank? || data['license_years'].blank?
-    return 'people_ownership' if data['shareholders'].blank?
-    return 'documents' if data['documents_uploaded'] != true
+    return 'license' if data['trade_license_validity'].blank?
+    return 'activities' if data['business_activities'].blank?
+    return 'names' if data['name_options'].blank?
+    return 'shareholding' if data['share_capital'].blank?
+    return 'members' if data['shareholders'].blank? && data['directors'].blank?
+    return 'ubos' if data['ubos'].blank?
+    return 'review' if data['gm_signatory_name'].blank?
     'submitted'
+  end
+  
+  private
+  
+  def generate_draft_token
+    self.draft_token = SecureRandom.urlsafe_base64(32)
   end
 end

@@ -1,3 +1,9 @@
+/**
+ * @deprecated This is the OLD company formation form.
+ * Please use the NEW form at: /application/new
+ * This form will be removed in the next release.
+ */
+
 import CompanyFormationForm from '@/components/forms/company-formation-form'
 
 // Temporarily disable auth check for testing

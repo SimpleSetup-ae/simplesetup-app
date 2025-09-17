@@ -17,6 +17,42 @@ Rails.application.routes.draw do
       post '/auth/sign_in', to: 'auth#login'
       delete '/auth/sign_out', to: 'auth#sign_out'
       
+      # OTP Authentication
+      post '/auth/check_user', to: 'otp#check_user'
+      post '/auth/register', to: 'otp#register'
+      post '/auth/send_otp', to: 'otp#send_otp'
+      post '/auth/verify_otp', to: 'otp#verify_otp'
+      post '/auth/resend_otp', to: 'otp#resend_otp'
+      
+      # Applications (New Sign-up Flow)
+      resources :applications do
+        member do
+          patch :progress
+          post :claim
+          post :submit
+        end
+        collection do
+          get 'admin', to: 'applications#admin_index'
+          get 'admin/:id', to: 'applications#admin_show'
+          patch 'admin/:id', to: 'applications#admin_update'
+        end
+        
+        # Nested document routes for applications
+        resources :documents do
+          collection do
+            post :extract_passport
+          end
+        end
+      end
+      
+      # Pricing
+      get '/pricing/quote', to: 'pricing#quote'
+      get '/pricing/catalog', to: 'pricing#catalog'
+      
+      # Translations
+      post '/translations/arabic', to: 'translations#arabic'
+      get '/translations/limit', to: 'translations#limit'
+      
       # Companies
       resources :companies do
         member do

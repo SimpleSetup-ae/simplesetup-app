@@ -36,13 +36,13 @@ export async function middleware(request: NextRequest) {
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
     try {
       // Check authentication with backend API
-      const response = await fetch(`http://localhost:3001/api/v1/auth/me`, {
+      const authResponse = await fetch(`http://localhost:3001/api/v1/auth/me`, {
         headers: {
           'Cookie': request.headers.get('cookie') || ''
         }
       })
       
-      if (!response.ok) {
+      if (!authResponse.ok) {
         // Not authenticated, redirect to sign-in
         const signInUrl = new URL('/sign-in', request.url)
         signInUrl.searchParams.set('redirect', pathname)

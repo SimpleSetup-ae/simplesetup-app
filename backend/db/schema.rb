@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 22) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_17_131303) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -27,6 +27,18 @@ ActiveRecord::Schema[7.1].define(version: 22) do
   enable_extension "plpgsql"
   enable_extension "supabase_vault"
   enable_extension "uuid-ossp"
+
+  create_table "application_progress", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "company_id", null: false
+    t.integer "step", default: 0, null: false
+    t.integer "percent", default: 0, null: false
+    t.datetime "last_activity_at", default: -> { "now()" }, null: false
+    t.string "current_page"
+    t.jsonb "page_data", default: {}
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["company_id"], name: "index_application_progress_on_company_id", unique: true
+  end
 
   create_table "billing_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "company_id", null: false
@@ -94,15 +106,65 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.string "license_number"
     t.string "free_zone", null: false
     t.string "status", default: "draft", null: false
-    t.uuid "owner_id", null: false
+    t.uuid "owner_id"
     t.text "activity_codes", default: [], array: true
     t.jsonb "metadata", default: {}
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "draft_token"
+    t.string "formation_type"
+    t.decimal "estimated_annual_turnover", precision: 15, scale: 2
+    t.string "formation_step"
+    t.integer "completion_percentage", default: 0
+    t.jsonb "auto_save_data", default: {}
+    t.datetime "submitted_at"
+    t.datetime "approved_at"
+    t.datetime "rejected_at"
+    t.datetime "formed_at"
+    t.integer "trade_license_validity", default: 1
+    t.integer "visa_package", default: 0
+    t.integer "partner_visa_count", default: 0
+    t.integer "inside_country_visas", default: 0
+    t.integer "outside_country_visas", default: 0
+    t.boolean "establishment_card", default: false
+    t.string "require_investor_or_partner_visa"
+    t.decimal "share_capital", precision: 15, scale: 2, default: "150000.0"
+    t.decimal "share_value", precision: 10, scale: 2, default: "10.0"
+    t.integer "total_shares"
+    t.boolean "voting_rights_proportional", default: true
+    t.text "voting_rights_notes"
+    t.string "shareholding_type"
+    t.uuid "main_activity_id"
+    t.boolean "request_custom_activity", default: false
+    t.text "custom_activity_description"
+    t.string "countries_of_operation", default: ["UAE"], array: true
+    t.boolean "operate_as_franchise", default: false
+    t.text "franchise_details"
+    t.string "name_options", default: [], array: true
+    t.string "name_arabic"
+    t.string "license_type"
+    t.string "license_status"
+    t.string "business_community"
+    t.date "first_license_issue_date"
+    t.date "current_license_issue_date"
+    t.date "license_expiry_date"
+    t.string "establishment_card_number"
+    t.date "establishment_card_issue_date"
+    t.date "establishment_card_expiry_date"
+    t.string "gm_signatory_name"
+    t.string "gm_signatory_email"
+    t.boolean "ubo_terms_accepted", default: false
+    t.boolean "accept_activity_rules", default: false
     t.index ["deleted_at"], name: "index_companies_on_deleted_at"
+    t.index ["draft_token"], name: "index_companies_on_draft_token", unique: true
+    t.index ["formation_step"], name: "index_companies_on_formation_step"
+    t.index ["formation_type"], name: "index_companies_on_formation_type"
     t.index ["license_number"], name: "index_companies_on_license_number", unique: true
     t.index ["owner_id"], name: "index_companies_on_owner_id"
+    t.index ["status", "owner_id"], name: "index_companies_on_status_and_owner"
+    t.index ["status", "submitted_at"], name: "index_companies_on_status_and_submitted"
+    t.index ["submitted_at"], name: "index_companies_on_submitted_at"
   end
 
   create_table "company_invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -177,13 +239,26 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.uuid "verified_by_id"
     t.datetime "ocr_completed_at"
     t.datetime "fraud_check_completed_at"
+    t.string "document_category"
+    t.string "document_sub_type"
+    t.boolean "is_ubo_document", default: false
+    t.uuid "parent_company_id"
+    t.date "expiry_date"
+    t.date "issue_date"
+    t.string "issuing_country"
+    t.string "issuing_authority"
     t.index "((fraud_assessment ->> 'risk_band'::text))", name: "index_documents_on_fraud_risk_band", where: "(fraud_assessment IS NOT NULL)"
     t.index ["company_id"], name: "index_documents_on_company_id"
     t.index ["deleted_at"], name: "index_documents_on_deleted_at"
+    t.index ["document_category"], name: "index_documents_on_document_category"
+    t.index ["document_sub_type"], name: "index_documents_on_document_sub_type"
     t.index ["document_type"], name: "index_documents_on_document_type"
+    t.index ["expiry_date"], name: "index_documents_on_expiry_date"
     t.index ["extracted_data"], name: "index_documents_on_extracted_data", using: :gin
     t.index ["fraud_assessment"], name: "index_documents_on_fraud_assessment", using: :gin
+    t.index ["is_ubo_document"], name: "index_documents_on_is_ubo_document"
     t.index ["ocr_status"], name: "index_documents_on_ocr_status"
+    t.index ["parent_company_id"], name: "index_documents_on_parent_company_id"
     t.index ["person_id"], name: "index_documents_on_person_id"
     t.index ["storage_path"], name: "index_documents_on_storage_path", unique: true
     t.index ["uploaded_at"], name: "index_documents_on_uploaded_at"
@@ -301,6 +376,7 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.datetime "updated_at", null: false
     t.date "passport_expiry_date"
     t.date "passport_issue_date"
+    t.float "passport_extraction_confidence"
     t.index ["company_id", "type"], name: "index_people_on_company_id_and_type"
     t.index ["company_id"], name: "index_people_on_company_id"
     t.index ["deleted_at"], name: "index_people_on_deleted_at"
@@ -480,11 +556,27 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.string "uid"
     t.text "google_token"
     t.text "linkedin_token"
+    t.boolean "is_admin", default: false, null: false
+    t.string "otp_secret"
+    t.boolean "otp_required_for_login", default: false
+    t.datetime "last_otp_at"
+    t.text "otp_backup_codes"
+    t.string "current_otp"
+    t.datetime "current_otp_sent_at"
+    t.datetime "otp_verified_at"
+    t.string "phone_number"
+    t.boolean "phone_verified", default: false
+    t.integer "translation_requests_count", default: 0, null: false
+    t.datetime "translation_requests_reset_at"
     t.index ["confirmation_token"], name: "index_users_on_confirmation_token", unique: true
+    t.index ["current_otp"], name: "index_users_on_current_otp"
     t.index ["deleted_at"], name: "index_users_on_deleted_at"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["is_admin"], name: "index_users_on_is_admin"
+    t.index ["phone_number"], name: "index_users_on_phone_number"
     t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["translation_requests_reset_at"], name: "index_users_on_translation_requests_reset_at"
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
   end
 
@@ -564,6 +656,7 @@ ActiveRecord::Schema[7.1].define(version: 22) do
     t.index ["workflow_instance_id"], name: "index_workflow_steps_on_workflow_instance_id"
   end
 
+  add_foreign_key "application_progress", "companies", on_delete: :cascade
   add_foreign_key "billing_accounts", "companies"
   add_foreign_key "business_activity_fees", "pricing_catalogs"
   add_foreign_key "companies", "users", column: "owner_id"
