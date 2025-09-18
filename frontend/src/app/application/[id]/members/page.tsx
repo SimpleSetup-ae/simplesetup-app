@@ -80,7 +80,7 @@ export default function MembersPage({ params }: { params: { id: string } }) {
   const handleAddPerson = (type: 'shareholder') => {
     const newPerson: Person = {
       id: `${Date.now()}_${Math.random()}`,
-      type: 'Individual',
+      type: applicationData.shareholding_type === 'corporate' ? 'Corporate' : 'Individual',
       role: type,
       share_percentage: type === 'shareholder' ? (shareholders.length === 0 ? 100 : Math.floor(100 / (shareholders.length + 1))) : undefined
     }
@@ -248,13 +248,13 @@ export default function MembersPage({ params }: { params: { id: string } }) {
       <CardContent className="pt-6">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
-            {person.type === 'Individual' ? (
+            {(person.type === 'Individual' || applicationData.shareholding_type === 'individual') ? (
               <User className="h-5 w-5 text-gray-500" />
             ) : (
               <Building className="h-5 w-5 text-gray-500" />
             )}
             <span className="font-medium">
-              {person.type === 'Individual' ? 'Individual' : 'Corporate Entity'}
+              {(person.type === 'Individual' || applicationData.shareholding_type === 'individual') ? 'Individual' : 'Corporate Entity'}
               {type === 'general_manager' && <span className="text-blue-600 ml-2">(General Manager)</span>}
             </span>
             {type === 'shareholder' && person.share_percentage !== undefined && (
@@ -281,7 +281,7 @@ export default function MembersPage({ params }: { params: { id: string } }) {
           )}
         </div>
         
-        {person.type === 'Individual' ? (
+        {(person.type === 'Individual' || applicationData.shareholding_type === 'individual') ? (
           <div className="space-y-4">
             {/* Passport Upload */}
             <div>
