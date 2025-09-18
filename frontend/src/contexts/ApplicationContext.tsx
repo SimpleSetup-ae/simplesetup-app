@@ -44,6 +44,7 @@ interface ApplicationData {
   
   shareholders?: any[]
   directors?: any[]
+  general_manager?: any
   ubos?: any[]
   
   gm_signatory_name?: string
@@ -265,6 +266,26 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
     setError(null)
     
     try {
+      // First, force flush any pending auto-save data
+      // This ensures all form data is saved to backend before submission
+      const flushResponse = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          form_data: applicationData,
+          step_name: 'final_flush'  // Special marker for final data flush
+        })
+      })
+      
+      if (!flushResponse.ok) {
+        console.error('Failed to flush data before submission')
+      }
+      
+      // Small delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Now submit the application
       const response = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

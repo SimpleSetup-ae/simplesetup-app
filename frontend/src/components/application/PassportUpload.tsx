@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react'
 import { apiPost } from '@/lib/api'
 
 interface PassportData {
@@ -45,7 +45,43 @@ export function PassportUpload({
   const [processingProgress, setProcessingProgress] = useState(0)
   const [fileName, setFileName] = useState<string>('')
   const [confidence, setConfidence] = useState<number>(0)
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const generateThumbnail = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const img = new Image()
+      
+      img.onload = () => {
+        // Set thumbnail dimensions (max 200px width/height)
+        const maxSize = 200
+        let { width, height } = img
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width
+            width = maxSize
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height
+            height = maxSize
+          }
+        }
+        
+        canvas.width = width
+        canvas.height = height
+        
+        ctx?.drawImage(img, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/jpeg', 0.8))
+      }
+      
+      img.onerror = reject
+      img.src = URL.createObjectURL(file)
+    })
+  }
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -67,6 +103,10 @@ export function PassportUpload({
     setState('uploading')
     setUploadProgress(0)
     setProcessingProgress(0)
+
+    // Generate thumbnail
+    const thumbnail = await generateThumbnail(file)
+    setThumbnailUrl(thumbnail)
 
     try {
       await uploadAndExtract(file)
@@ -187,6 +227,7 @@ export function PassportUpload({
     setProcessingProgress(0)
     setFileName('')
     setConfidence(0)
+    setThumbnailUrl('')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -275,22 +316,32 @@ export function PassportUpload({
             </div>
           )}
 
-          {state === 'completed' && (
-            <div className="mt-4">
+          {state === 'completed' && thumbnailUrl && (
+            <div className="mt-4 space-y-3">
+              {/* Thumbnail with delete button */}
+              <div className="relative inline-block">
+                <img 
+                  src={thumbnailUrl} 
+                  alt="Passport thumbnail"
+                  className="w-32 h-32 object-cover rounded-lg border-2 border-green-200 shadow-sm"
+                />
+                <Button
+                  onClick={resetUpload}
+                  variant="destructive"
+                  size="sm"
+                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+              
+              {/* Success message */}
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
                   Passport data extracted successfully! Confidence: {confidence}%
                 </AlertDescription>
               </Alert>
-              <Button
-                onClick={resetUpload}
-                variant="outline"
-                size="sm"
-                className="mt-2"
-              >
-                Upload Another
-              </Button>
             </div>
           )}
 

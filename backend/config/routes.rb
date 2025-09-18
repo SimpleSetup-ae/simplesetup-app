@@ -17,6 +17,9 @@ Rails.application.routes.draw do
       post '/auth/sign_in', to: 'auth#login'
       delete '/auth/sign_out', to: 'auth#sign_out'
       
+      # Dashboard
+      get '/dashboard', to: 'dashboard#show'
+      
       # OTP Authentication
       post '/auth/check_user', to: 'otp#check_user'
       post '/auth/register', to: 'otp#register'

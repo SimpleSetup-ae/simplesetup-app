@@ -1,3 +1,5 @@
+'use client'
+
 // Dashboard content will be wrapped by layout.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -5,11 +7,51 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { Building2, FileText, Clock, CheckCircle, AlertCircle, Download, Users, Calendar, ExternalLink } from 'lucide-react'
 import { fetchDashboardData, type DashboardData } from '@/lib/api'
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 
 // Company Owner Dashboard Component
-async function CompanyOwnerDashboard() {
-  const dashboardData = await fetchDashboardData()
+function CompanyOwnerDashboard() {
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true)
+        const data = await fetchDashboardData()
+        setDashboardData(data)
+      } catch (err: any) {
+        console.error('Dashboard fetch error:', err)
+        setError(err.message || 'Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDashboardData()
+  }, [])
+
+  if (loading) {
+    return <DashboardLoading />
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <AlertCircle className="h-16 w-16 text-red-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Dashboard</h3>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
+      </div>
+    )
+  }
+
+  if (!dashboardData) {
+    return <DashboardLoading />
+  }
   
   // If no companies, show empty state
   if (dashboardData.companies.length === 0) {
@@ -97,10 +139,10 @@ async function CompanyOwnerDashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              { key: 'trade_license', label: 'Trade License', doc: company.documents.trade_license },
-              { key: 'moa', label: 'Memorandum of Association (MOA)', doc: company.documents.moa },
-              { key: 'certificate_of_incorporation', label: 'Certificate of Incorporation', doc: company.documents.certificate_of_incorporation },
-              { key: 'commercial_license', label: 'Commercial License', doc: company.documents.commercial_license }
+              { key: 'trade_license', label: 'Trade License', doc: company.documents?.trade_license },
+              { key: 'moa', label: 'Memorandum of Association (MOA)', doc: company.documents?.moa },
+              { key: 'certificate_of_incorporation', label: 'Certificate of Incorporation', doc: company.documents?.certificate_of_incorporation },
+              { key: 'commercial_license', label: 'Commercial License', doc: company.documents?.commercial_license }
             ].map(({ key, label, doc }) => (
               <div key={key} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex items-center gap-3">
@@ -141,7 +183,7 @@ async function CompanyOwnerDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {company.shareholders.length > 0 && (
+            {company.shareholders && company.shareholders.length > 0 && (
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Shareholders</h4>
                 <div className="space-y-2">
@@ -167,7 +209,7 @@ async function CompanyOwnerDashboard() {
               </div>
             )}
             
-            {company.directors.length > 0 && (
+            {company.directors && company.directors.length > 0 && (
               <div>
                 <h4 className="font-medium text-sm text-gray-700 mb-2">Directors</h4>
                 <div className="space-y-2">
@@ -206,7 +248,7 @@ async function CompanyOwnerDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {dashboardData.notifications.length === 0 ? (
+            {!dashboardData.notifications || dashboardData.notifications.length === 0 ? (
               <p className="text-gray-600 text-sm">No notifications at this time.</p>
             ) : (
               <div className="space-y-3">
@@ -330,7 +372,7 @@ function DashboardLoading() {
 }
 
 // Main Dashboard Page with role detection
-export default async function DashboardPage({
+export default function DashboardPage({
   searchParams,
 }: {
   searchParams?: { user?: string }

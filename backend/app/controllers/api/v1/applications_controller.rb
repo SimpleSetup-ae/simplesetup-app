@@ -357,18 +357,34 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   def transform_auto_save_data_to_records!(company)
     auto_save = company.auto_save_data || {}
     
+    # Flatten nested step data - frontend saves under step names like 'activities', 'members', etc.
+    merged_data = {}
+    auto_save.each do |key, value|
+      if value.is_a?(Hash)
+        # If it's a step name with nested data, merge it
+        merged_data.merge!(value)
+      else
+        # If it's already a top-level field, keep it
+        merged_data[key] = value
+      end
+    end
+    
+    # Now use merged_data for all transformations
+    
     # Transform business activities to activity_codes
-    if auto_save['business_activities'].present?
-      activity_codes = auto_save['business_activities'].map { |activity| activity['activity_id'] || activity['activity_code'] }.compact
+    if merged_data['business_activities'].present?
+      activity_codes = merged_data['business_activities'].map { |activity| 
+        activity['activity_id'] || activity['activity_code'] 
+      }.compact
       company.update!(activity_codes: activity_codes) if activity_codes.any?
     end
     
     # Transform shareholders to Person records
-    if auto_save['shareholders'].present?
+    if merged_data['shareholders'].present?
       # Clear existing shareholders
       company.shareholders.destroy_all
       
-      auto_save['shareholders'].each do |shareholder_data|
+      merged_data['shareholders'].each do |shareholder_data|
         company.people.create!(
           type: 'shareholder',
           first_name: shareholder_data['first_name'],
@@ -386,11 +402,11 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
     
     # Transform directors to Person records (General Manager becomes director)
-    if auto_save['general_manager'].present?
+    if merged_data['general_manager'].present?
       # Clear existing directors
       company.directors.destroy_all
       
-      gm_data = auto_save['general_manager']
+      gm_data = merged_data['general_manager']
       company.people.create!(
         type: 'director',
         first_name: gm_data['first_name'],
@@ -407,19 +423,29 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
     
     # Transform name options
-    if auto_save['name_options'].present?
-      company.update!(name_options: auto_save['name_options'])
+    if merged_data['name_options'].present?
+      company.update!(name_options: merged_data['name_options'])
     end
     
     # Transform GM signatory name
-    if auto_save['gm_signatory_name'].present?
-      company.update!(gm_signatory_name: auto_save['gm_signatory_name'])
+    if merged_data['gm_signatory_name'].present?
+      company.update!(gm_signatory_name: merged_data['gm_signatory_name'])
     end
     
     # Transform UBO terms acceptance
-    if auto_save.key?('ubo_terms_accepted')
-      company.update!(ubo_terms_accepted: auto_save['ubo_terms_accepted'])
+    if merged_data.key?('ubo_terms_accepted')
+      company.update!(ubo_terms_accepted: merged_data['ubo_terms_accepted'])
     end
+    
+    # Also update any direct application params that were saved
+    update_params = {}
+    update_params[:trade_license_validity] = merged_data['trade_license_validity'] if merged_data['trade_license_validity'].present?
+    update_params[:visa_package] = merged_data['visa_package'] if merged_data.key?('visa_package')
+    update_params[:share_capital] = merged_data['share_capital'] if merged_data['share_capital'].present?
+    update_params[:share_value] = merged_data['share_value'] if merged_data['share_value'].present?
+    update_params[:shareholding_type] = merged_data['shareholding_type'] if merged_data['shareholding_type'].present?
+    
+    company.update!(update_params) if update_params.any?
     
     # Reload associations to reflect changes
     company.reload
