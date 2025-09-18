@@ -267,23 +267,27 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
     
     try {
       // First, force flush any pending auto-save data
-      // This ensures all form data is saved to backend before submission
+      // Clean the data to avoid nested form_data issues
+      const { id, form_data, ...cleanData } = applicationData
+      
       const flushResponse = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          form_data: applicationData,
+          form_data: cleanData,  // Send clean data without nested form_data
           step_name: 'final_flush'  // Special marker for final data flush
         })
       })
       
       if (!flushResponse.ok) {
         console.error('Failed to flush data before submission')
+        const errorData = await flushResponse.json()
+        console.error('Flush error:', errorData)
       }
       
       // Small delay to ensure database write completes
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // Now submit the application
       const response = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}/submit`, {
@@ -302,6 +306,7 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
         return { success: false, errors: data.errors || ['Submission failed'] }
       }
     } catch (err) {
+      console.error('Submission error:', err)
       setError('Network error during submission')
       return { success: false, errors: ['Network error'] }
     } finally {
