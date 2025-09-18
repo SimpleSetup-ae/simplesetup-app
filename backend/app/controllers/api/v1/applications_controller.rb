@@ -360,95 +360,133 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     # Flatten nested step data - frontend saves under step names like 'activities', 'members', etc.
     merged_data = {}
     auto_save.each do |key, value|
-      if value.is_a?(Hash)
-        # If it's a step name with nested data, merge it
+      if value.is_a?(Hash) && %w[activities members ubos names license shareholding].include?(key)
+        # If it's a known step name with nested data, merge it
         merged_data.merge!(value)
-      else
+      elsif !value.is_a?(Hash)
         # If it's already a top-level field, keep it
         merged_data[key] = value
       end
     end
     
-    # Now use merged_data for all transformations
-    
-    # Transform business activities to activity_codes
-    if merged_data['business_activities'].present?
-      activity_codes = merged_data['business_activities'].map { |activity| 
-        activity['activity_id'] || activity['activity_code'] 
-      }.compact
-      company.update!(activity_codes: activity_codes) if activity_codes.any?
-    end
-    
-    # Transform shareholders to Person records
-    if merged_data['shareholders'].present?
-      # Clear existing shareholders
-      company.shareholders.destroy_all
-      
-      merged_data['shareholders'].each do |shareholder_data|
-        company.people.create!(
-          type: 'shareholder',
-          first_name: shareholder_data['first_name'],
-          last_name: shareholder_data['last_name'],
-          nationality: shareholder_data['nationality'],
-          passport_number: shareholder_data['passport_number'],
-          share_percentage: shareholder_data['share_percentage'],
-          contact_info: {
-            email: shareholder_data['email'],
-            phone: shareholder_data['phone']
-          }.compact,
-          metadata: shareholder_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'share_percentage', 'email', 'phone')
-        )
+    # Wrap all transformations in a transaction for atomicity
+    ActiveRecord::Base.transaction do
+      # Transform business activities to activity_codes
+      if merged_data['business_activities'].present? && merged_data['business_activities'].is_a?(Array)
+        activity_codes = merged_data['business_activities'].map { |activity| 
+          next unless activity.is_a?(Hash)
+          activity['activity_id'] || activity['activity_code'] 
+        }.compact.uniq
+        company.activity_codes = activity_codes if activity_codes.any?
       end
-    end
-    
-    # Transform directors to Person records (General Manager becomes director)
-    if merged_data['general_manager'].present?
-      # Clear existing directors
-      company.directors.destroy_all
       
-      gm_data = merged_data['general_manager']
-      company.people.create!(
-        type: 'director',
-        first_name: gm_data['first_name'],
-        last_name: gm_data['last_name'],
-        nationality: gm_data['nationality'],
-        passport_number: gm_data['passport_number'],
-        appointment_type: 'general_manager',
-        contact_info: {
-          email: gm_data['email'],
-          phone: gm_data['phone']
-        }.compact,
-        metadata: gm_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'email', 'phone')
-      )
+      # Transform shareholders to Person records
+      if merged_data['shareholders'].present? && merged_data['shareholders'].is_a?(Array)
+        # Store existing shareholders before destroying
+        existing_shareholders = company.shareholders.to_a
+        
+        begin
+          # Clear existing shareholders
+          company.shareholders.destroy_all
+          
+          merged_data['shareholders'].each do |shareholder_data|
+            next unless shareholder_data.is_a?(Hash)
+            
+            # Handle both individual and corporate shareholders
+            if shareholder_data['type'] == 'Corporate'
+              company.people.create!(
+                type: 'shareholder',
+                first_name: shareholder_data['company_name'] || 'Corporate Entity',
+                last_name: '',
+                nationality: shareholder_data['jurisdiction'] || shareholder_data['nationality'],
+                share_percentage: shareholder_data['share_percentage'] || 0,
+                metadata: shareholder_data
+              )
+            else
+              company.people.create!(
+                type: 'shareholder',
+                first_name: shareholder_data['first_name'] || '',
+                last_name: shareholder_data['last_name'] || '',
+                nationality: shareholder_data['nationality'],
+                passport_number: shareholder_data['passport_number'],
+                share_percentage: shareholder_data['share_percentage'] || 0,
+                contact_info: {
+                  email: shareholder_data['email'],
+                  phone: shareholder_data['phone']
+                }.compact,
+                metadata: shareholder_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'share_percentage', 'email', 'phone')
+              )
+            end
+          end
+        rescue => e
+          Rails.logger.error "Failed to create shareholders: #{e.message}"
+          # Don't leave company without shareholders if creation fails
+          raise ActiveRecord::Rollback
+        end
+      end
+      
+      # Transform directors to Person records (General Manager becomes director)
+      if merged_data['general_manager'].present? && merged_data['general_manager'].is_a?(Hash)
+        gm_data = merged_data['general_manager']
+        
+        begin
+          # Clear existing directors
+          company.directors.destroy_all
+          
+          company.people.create!(
+            type: 'director',
+            first_name: gm_data['first_name'] || '',
+            last_name: gm_data['last_name'] || '',
+            nationality: gm_data['nationality'],
+            passport_number: gm_data['passport_number'],
+            appointment_type: 'general_manager',
+            contact_info: {
+              email: gm_data['email'],
+              phone: gm_data['phone']
+            }.compact,
+            metadata: gm_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'email', 'phone')
+          )
+        rescue => e
+          Rails.logger.error "Failed to create director: #{e.message}"
+          raise ActiveRecord::Rollback
+        end
+      end
+      
+      # Collect all updates to apply at once
+      update_params = {}
+      
+      # Transform name options
+      if merged_data['name_options'].present? && merged_data['name_options'].is_a?(Array)
+        update_params[:name_options] = merged_data['name_options'].select { |n| n.is_a?(String) && n.present? }
+      end
+      
+      # Transform GM signatory name
+      if merged_data['gm_signatory_name'].present?
+        update_params[:gm_signatory_name] = merged_data['gm_signatory_name']
+      end
+      
+      # Transform UBO terms acceptance
+      if merged_data.key?('ubo_terms_accepted')
+        update_params[:ubo_terms_accepted] = merged_data['ubo_terms_accepted']
+      end
+      
+      # Add direct application params
+      update_params[:trade_license_validity] = merged_data['trade_license_validity'] if merged_data['trade_license_validity'].present?
+      update_params[:visa_package] = merged_data['visa_package'] if merged_data.key?('visa_package')
+      update_params[:share_capital] = merged_data['share_capital'] if merged_data['share_capital'].present?
+      update_params[:share_value] = merged_data['share_value'] if merged_data['share_value'].present?
+      update_params[:shareholding_type] = merged_data['shareholding_type'] if merged_data['shareholding_type'].present?
+      
+      # Apply all updates at once
+      company.update!(update_params) if update_params.any?
     end
-    
-    # Transform name options
-    if merged_data['name_options'].present?
-      company.update!(name_options: merged_data['name_options'])
-    end
-    
-    # Transform GM signatory name
-    if merged_data['gm_signatory_name'].present?
-      company.update!(gm_signatory_name: merged_data['gm_signatory_name'])
-    end
-    
-    # Transform UBO terms acceptance
-    if merged_data.key?('ubo_terms_accepted')
-      company.update!(ubo_terms_accepted: merged_data['ubo_terms_accepted'])
-    end
-    
-    # Also update any direct application params that were saved
-    update_params = {}
-    update_params[:trade_license_validity] = merged_data['trade_license_validity'] if merged_data['trade_license_validity'].present?
-    update_params[:visa_package] = merged_data['visa_package'] if merged_data.key?('visa_package')
-    update_params[:share_capital] = merged_data['share_capital'] if merged_data['share_capital'].present?
-    update_params[:share_value] = merged_data['share_value'] if merged_data['share_value'].present?
-    update_params[:shareholding_type] = merged_data['shareholding_type'] if merged_data['shareholding_type'].present?
-    
-    company.update!(update_params) if update_params.any?
     
     # Reload associations to reflect changes
     company.reload
+  rescue => e
+    Rails.logger.error "Transform failed: #{e.message}"
+    # Re-raise to let controller handle it
+    raise
   end
   
   def serialize_document(document)

@@ -1,0 +1,3 @@
+ruby test_passport_api.rb
+cd /Users/james/Simple-Setup-Corporate-Tax-Reg-Agent && ruby test_passport_api.rb
+exit
