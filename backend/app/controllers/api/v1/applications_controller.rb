@@ -120,6 +120,9 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     # Transform auto-save data to database records before validation
     transform_auto_save_data_to_records!(@company)
     
+    # Log current state for debugging
+    Rails.logger.info "After transform - gm_signatory_name: #{@company.gm_signatory_name}, ubo_terms_accepted: #{@company.ubo_terms_accepted}"
+    
     # Validate all required fields
     validation_errors = validate_submission(@company)
     
@@ -414,6 +417,14 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       end
     end
     
+    # Also check for fields that might be at the top level
+    # (in case they were saved directly without a step name)
+    %w[gm_signatory_name gm_signatory_email ubo_terms_accepted].each do |field|
+      if auto_save[field].present? && !merged_data.key?(field)
+        merged_data[field] = auto_save[field]
+      end
+    end
+    
     # Wrap all transformations in a transaction for atomicity
     ActiveRecord::Base.transaction do
       # Transform business activities to activity_codes
@@ -506,13 +517,24 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       end
       
       # Transform GM signatory name
+      # Check both gm_signatory_name field and extract from general_manager object
       if merged_data['gm_signatory_name'].present?
         update_params[:gm_signatory_name] = merged_data['gm_signatory_name']
+      elsif merged_data['general_manager'].present? && merged_data['general_manager'].is_a?(Hash)
+        # If no explicit gm_signatory_name but we have a general_manager, use their name
+        gm = merged_data['general_manager']
+        full_name = "#{gm['first_name']} #{gm['last_name']}".strip
+        update_params[:gm_signatory_name] = full_name if full_name.present?
       end
       
       # Transform UBO terms acceptance
-      if merged_data.key?('ubo_terms_accepted')
+      # Only set if explicitly true/false, not nil
+      if merged_data['ubo_terms_accepted'] == true || merged_data['ubo_terms_accepted'] == false
         update_params[:ubo_terms_accepted] = merged_data['ubo_terms_accepted']
+      elsif merged_data['accept_activity_rules'] == true
+        # If activity rules were accepted but UBO terms not explicitly set, 
+        # assume they were accepted (for backward compatibility)
+        update_params[:ubo_terms_accepted] = true
       end
       
       # Add direct application params
@@ -523,11 +545,13 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       update_params[:shareholding_type] = merged_data['shareholding_type'] if merged_data['shareholding_type'].present?
       
       # Apply all updates at once
+      Rails.logger.info "Updating company with params: #{update_params.inspect}"
       company.update!(update_params) if update_params.any?
     end
     
     # Reload associations to reflect changes
     company.reload
+    Rails.logger.info "After reload - gm_signatory_name: #{company.gm_signatory_name}, ubo_terms_accepted: #{company.ubo_terms_accepted}"
   rescue => e
     Rails.logger.error "Transform failed: #{e.message}"
     # Re-raise to let controller handle it

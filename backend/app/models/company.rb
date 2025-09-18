@@ -138,12 +138,12 @@ class Company < ApplicationRecord
   end
 
   def merge_auto_save_to_form_data!
+    # This is now handled by transform_auto_save_data_to_records!
+    # We just clear the auto_save_data after submission
     return if auto_save_data.blank?
     
-    merged_data = form_data.deep_merge(auto_save_data)
     update!(
-      formation_data: merged_data,
-      formation_step: determine_current_step(merged_data),
+      formation_step: determine_current_step(auto_save_data),
       auto_save_data: {},
       last_auto_save_at: nil
     )
