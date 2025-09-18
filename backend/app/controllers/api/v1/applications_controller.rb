@@ -311,16 +311,56 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   end
   
   def serialize_full_application(company)
+    # Flatten auto_save_data to merge step-specific data
+    auto_save = company.auto_save_data || {}
+    merged_data = {}
+    
+    # Merge all step data into a flat structure
+    auto_save.each do |key, value|
+      if value.is_a?(Hash) && %w[activities members ubos names license shareholding].include?(key)
+        merged_data.merge!(value)
+      elsif !value.is_a?(Hash)
+        merged_data[key] = value
+      end
+    end
+    
+    # If auto_save_data has a top-level final_flush, use that data
+    if auto_save['final_flush'].is_a?(Hash)
+      merged_data = auto_save['final_flush']
+    elsif auto_save.any? && !auto_save.keys.any? { |k| %w[activities members ubos names license shareholding final_flush].include?(k) }
+      # If auto_save_data doesn't have step keys, it's probably already flat
+      merged_data = auto_save
+    end
+    
     serialize_application(company).merge(
-      form_data: company.auto_save_data.presence || company.form_data,
-      trade_license_validity: company.trade_license_validity,
-      visa_package: company.visa_package,
-      partner_visa_count: company.partner_visa_count,
-      share_capital: company.share_capital,
-      share_value: company.share_value,
-      name_options: company.name_options,
-      shareholders: company.shareholders.map { |s| serialize_person(s) },
-      directors: company.directors.map { |d| serialize_person(d) },
+      form_data: merged_data,
+      # Include fields from both database and auto_save_data
+      trade_license_validity: company.trade_license_validity || merged_data['trade_license_validity'],
+      visa_package: company.visa_package || merged_data['visa_package'],
+      partner_visa_count: company.partner_visa_count || merged_data['partner_visa_count'],
+      share_capital: company.share_capital || merged_data['share_capital'],
+      share_value: company.share_value || merged_data['share_value'],
+      name_options: company.name_options.presence || merged_data['name_options'],
+      # Include data from auto_save that might not be in database yet
+      business_activities: merged_data['business_activities'],
+      main_activity_id: merged_data['main_activity_id'],
+      request_custom_activity: merged_data['request_custom_activity'],
+      custom_activity_description: merged_data['custom_activity_description'],
+      countries_of_operation: merged_data['countries_of_operation'],
+      operate_as_franchise: merged_data['operate_as_franchise'],
+      franchise_details: merged_data['franchise_details'],
+      accept_activity_rules: merged_data['accept_activity_rules'],
+      shareholding_type: merged_data['shareholding_type'],
+      total_shares: merged_data['total_shares'],
+      voting_rights_proportional: merged_data['voting_rights_proportional'],
+      voting_rights_notes: merged_data['voting_rights_notes'],
+      general_manager: merged_data['general_manager'],
+      gm_signatory_name: company.gm_signatory_name || merged_data['gm_signatory_name'],
+      gm_signatory_email: merged_data['gm_signatory_email'],
+      ubo_terms_accepted: company.ubo_terms_accepted || merged_data['ubo_terms_accepted'],
+      # Include database records
+      shareholders: company.shareholders.any? ? company.shareholders.map { |s| serialize_person(s) } : merged_data['shareholders'],
+      directors: company.directors.any? ? company.directors.map { |d| serialize_person(d) } : merged_data['directors'],
       documents: company.documents.map { |d| serialize_document(d) }
     )
   end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_17_131303) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -156,6 +156,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_17_131303) do
     t.string "gm_signatory_email"
     t.boolean "ubo_terms_accepted", default: false
     t.boolean "accept_activity_rules", default: false
+    t.datetime "last_auto_save_at"
     t.index ["deleted_at"], name: "index_companies_on_deleted_at"
     t.index ["draft_token"], name: "index_companies_on_draft_token", unique: true
     t.index ["formation_step"], name: "index_companies_on_formation_step"
