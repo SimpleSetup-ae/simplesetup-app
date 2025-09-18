@@ -112,6 +112,9 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   
   # POST /api/v1/applications/:id/submit
   def submit
+    # Transform auto-save data to database records before validation
+    transform_auto_save_data_to_records!(@company)
+    
     # Validate all required fields
     validation_errors = validate_submission(@company)
     
@@ -348,6 +351,78 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       passport_number: person.passport_number,
       share_percentage: person.share_percentage
     }
+  end
+
+  # Transform auto-save data into actual database records and fields
+  def transform_auto_save_data_to_records!(company)
+    auto_save = company.auto_save_data || {}
+    
+    # Transform business activities to activity_codes
+    if auto_save['business_activities'].present?
+      activity_codes = auto_save['business_activities'].map { |activity| activity['activity_id'] || activity['activity_code'] }.compact
+      company.update!(activity_codes: activity_codes) if activity_codes.any?
+    end
+    
+    # Transform shareholders to Person records
+    if auto_save['shareholders'].present?
+      # Clear existing shareholders
+      company.shareholders.destroy_all
+      
+      auto_save['shareholders'].each do |shareholder_data|
+        company.people.create!(
+          type: 'shareholder',
+          first_name: shareholder_data['first_name'],
+          last_name: shareholder_data['last_name'],
+          nationality: shareholder_data['nationality'],
+          passport_number: shareholder_data['passport_number'],
+          share_percentage: shareholder_data['share_percentage'],
+          contact_info: {
+            email: shareholder_data['email'],
+            phone: shareholder_data['phone']
+          }.compact,
+          metadata: shareholder_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'share_percentage', 'email', 'phone')
+        )
+      end
+    end
+    
+    # Transform directors to Person records (General Manager becomes director)
+    if auto_save['general_manager'].present?
+      # Clear existing directors
+      company.directors.destroy_all
+      
+      gm_data = auto_save['general_manager']
+      company.people.create!(
+        type: 'director',
+        first_name: gm_data['first_name'],
+        last_name: gm_data['last_name'],
+        nationality: gm_data['nationality'],
+        passport_number: gm_data['passport_number'],
+        appointment_type: 'general_manager',
+        contact_info: {
+          email: gm_data['email'],
+          phone: gm_data['phone']
+        }.compact,
+        metadata: gm_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'email', 'phone')
+      )
+    end
+    
+    # Transform name options
+    if auto_save['name_options'].present?
+      company.update!(name_options: auto_save['name_options'])
+    end
+    
+    # Transform GM signatory name
+    if auto_save['gm_signatory_name'].present?
+      company.update!(gm_signatory_name: auto_save['gm_signatory_name'])
+    end
+    
+    # Transform UBO terms acceptance
+    if auto_save.key?('ubo_terms_accepted')
+      company.update!(ubo_terms_accepted: auto_save['ubo_terms_accepted'])
+    end
+    
+    # Reload associations to reflect changes
+    company.reload
   end
   
   def serialize_document(document)
