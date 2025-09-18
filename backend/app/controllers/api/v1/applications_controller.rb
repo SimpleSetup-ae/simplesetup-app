@@ -1,5 +1,5 @@
 class Api::V1::ApplicationsController < Api::V1::BaseController
-  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress]
+  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
   before_action :set_company, except: [:create, :index, :admin_index]
   before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
   
@@ -59,7 +59,12 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   def update
     # Store data in auto_save_data for drafts
     if @company.update(application_params)
-      @company.auto_save_form_data!(params[:form_data], params[:step_name]) if params[:form_data]
+      # Convert form_data to a hash if it's ActionController::Parameters
+      form_data = params[:form_data]
+      if form_data.present?
+        form_data = form_data.to_unsafe_h if form_data.respond_to?(:to_unsafe_h)
+        @company.auto_save_form_data!(form_data, params[:step_name])
+      end
       
       render json: {
         success: true,
