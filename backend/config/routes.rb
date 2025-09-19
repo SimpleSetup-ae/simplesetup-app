@@ -17,6 +17,9 @@ Rails.application.routes.draw do
       post '/auth/sign_in', to: 'auth#login'
       delete '/auth/sign_out', to: 'auth#sign_out'
       
+      # Dashboard
+      get '/dashboard', to: 'dashboard#show'
+      
       # OTP Authentication
       post '/auth/check_user', to: 'otp#check_user'
       post '/auth/register', to: 'otp#register'
@@ -43,6 +46,17 @@ Rails.application.routes.draw do
             post :extract_passport
           end
         end
+      end
+      
+      # Admin routes
+      namespace :admin do
+        resources :users do
+          member do
+            post :toggle_admin
+            post :toggle_lock
+          end
+        end
+        resources :companies, only: [:index, :show]
       end
       
       # Pricing

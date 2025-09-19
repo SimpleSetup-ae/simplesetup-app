@@ -54,11 +54,20 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       },
       members: {
         complete: !!(applicationData.shareholders && applicationData.shareholders.length > 0 && 
-                    applicationData.directors && applicationData.directors.length > 0),
+                    applicationData.general_manager),
         errors: []
       },
       ubos: {
-        complete: !!(applicationData.gm_signatory_name && applicationData.ubo_terms_accepted),
+        complete: (() => {
+          const shareholdingType = applicationData.shareholding_type
+          const requiresUBO = shareholdingType === 'corporate' || shareholdingType === 'mixed'
+          
+          if (!requiresUBO) {
+            return true // UBOs not required, so consider it complete
+          }
+          
+          return !!(applicationData.gm_signatory_name && applicationData.ubo_terms_accepted)
+        })(),
         errors: []
       }
     }
@@ -291,22 +300,26 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
                   ))}
                 </div>
                 <div>
-                  <p className="text-sm font-medium mb-1">Directors ({applicationData.directors?.length || 0})</p>
-                  {applicationData.directors?.map((d: any) => (
-                    <div key={d.id} className="text-sm">
-                      {d.first_name} {d.last_name} {d.company_name}
+                  <p className="text-sm font-medium mb-1">General Manager {applicationData.general_manager ? '(1)' : '(0)'}</p>
+                  {applicationData.general_manager && (
+                    <div className="text-sm">
+                      {applicationData.general_manager.first_name} {applicationData.general_manager.last_name} {applicationData.general_manager.company_name}
                     </div>
-                  ))}
+                  )}
+                  {!applicationData.general_manager && (
+                    <div className="text-sm text-gray-500">No General Manager selected</div>
+                  )}
                 </div>
               </div>
             )}
             
-            {/* UBOs - Only show if there are corporate shareholders */}
+            {/* UBOs - Only show if shareholding type requires UBOs */}
             {(() => {
-              const hasCorporateShareholders = applicationData.shareholders?.some((s: any) => s.type === 'Corporate')
+              const shareholdingType = applicationData.shareholding_type
+              const requiresUBO = shareholdingType === 'corporate' || shareholdingType === 'mixed'
               
-              if (!hasCorporateShareholders) {
-                return null // Don't show UBO section if no corporate shareholders
+              if (!requiresUBO) {
+                return null // Don't show UBO section if not required by shareholding type
               }
               
               return renderSection(

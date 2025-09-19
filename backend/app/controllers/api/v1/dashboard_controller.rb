@@ -140,10 +140,12 @@ class Api::V1::DashboardController < ApplicationController
                    passport_doc.extracted_data.dig('expiry_date') ||
                    passport_doc.extracted_data.dig('date_of_expiry')
       
-      return Date.parse(expiry_date).iso8601 if expiry_date.present?
-    rescue Date::Error
-      # Invalid date format in extracted data
-      nil
+      begin
+        return Date.parse(expiry_date).iso8601 if expiry_date.present?
+      rescue Date::Error
+        # Invalid date format in extracted data
+        nil
+      end
     end
     
     nil

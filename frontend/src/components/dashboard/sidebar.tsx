@@ -36,7 +36,8 @@ interface SidebarProps {
   className?: string
 }
 
-const menuItems = [
+// Regular user menu items
+const regularMenuItems = [
   {
     title: 'Dashboard',
     href: '/dashboard',
@@ -74,6 +75,35 @@ const menuItems = [
   }
 ]
 
+// Admin menu items
+const adminMenuItems = [
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+    icon: LayoutDashboard
+  },
+  {
+    title: 'Applications',
+    href: '/admin/applications',
+    icon: FileText
+  },
+  {
+    title: 'Companies',
+    href: '/admin/companies',
+    icon: Building2
+  },
+  {
+    title: 'Users',
+    href: '/admin/users',
+    icon: Users
+  },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings
+  }
+]
+
 // Mock companies data - in production this would come from API
 const companies = [
   {
@@ -92,6 +122,10 @@ const companies = [
 
 export default function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  
+  // Determine which menu items to show based on user role
+  const menuItems = user?.isAdmin ? adminMenuItems : regularMenuItems
 
   return (
     <div className={`flex flex-col h-full bg-white border-r ${className}`}>

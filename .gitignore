@@ -113,6 +113,9 @@ secrets/
 automations/screenshots/
 automations/logs/
 
+# Playwright MCP screenshots and traces
+.playwright-mcp/
+
 # Docker
 .dockerignore
 

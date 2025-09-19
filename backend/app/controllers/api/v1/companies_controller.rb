@@ -4,13 +4,23 @@ class Api::V1::CompaniesController < ApplicationController
   before_action :authorize_owner_access, only: [:update_owner_details]
   
   def index
-    @companies = current_user.companies
-                             .includes(:owner, :workflow_instances, :documents)
-                             .order(created_at: :desc)
+    if current_user&.admin?
+      # Admin view - all companies
+      @companies = Company.where(status: ['formed', 'active', 'issued'])
+                          .includes(:owner, :workflow_instances, :documents, :shareholders, :directors)
+                          .order(created_at: :desc)
+    else
+      # Regular user view - only their companies
+      @companies = current_user.companies
+                               .includes(:owner, :workflow_instances, :documents)
+                               .order(created_at: :desc)
+    end
     
     render json: {
       success: true,
-      data: @companies.map { |company| serialize_company(company) },
+      data: @companies.map { |company| 
+        current_user&.admin? ? serialize_admin_company(company) : serialize_company(company) 
+      },
       pagination: pagination_meta(@companies)
     }
   end
@@ -274,6 +284,28 @@ class Api::V1::CompaniesController < ApplicationController
     }
   end
   
+  def serialize_admin_company(company)
+    {
+      id: company.id,
+      name: company.name,
+      tradeName: company.trade_name,
+      licenseNumber: company.license_number,
+      freeZone: company.free_zone,
+      status: company.status,
+      formedAt: company.formed_at&.iso8601,
+      licenseExpiryDate: company.license_expiry_date&.iso8601,
+      ownerEmail: company.owner&.email,
+      ownerFullName: company.owner&.full_name,
+      estimatedAnnualTurnover: company.estimated_annual_turnover,
+      shareholderCount: company.shareholders.count,
+      directorCount: company.directors.count,
+      licenseType: company.license_type,
+      businessCommunity: company.business_community,
+      createdAt: company.created_at.iso8601,
+      updatedAt: company.updated_at.iso8601
+    }
+  end
+
   def serialize_company_detailed(company)
     base_data = serialize_company(company)
     

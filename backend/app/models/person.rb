@@ -1,6 +1,9 @@
 class Person < ApplicationRecord
   belongs_to :company
   
+  # Disable Single Table Inheritance since we use 'type' column for person type
+  self.inheritance_column = :_type_disabled
+  
   validates :type, presence: true, inclusion: { in: %w[shareholder director signatory] }
   validates :first_name, presence: true
   validates :last_name, presence: true

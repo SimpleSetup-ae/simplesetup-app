@@ -3,6 +3,7 @@ import { Inter, Merriweather, Lora } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/components/auth/auth-provider'
 import { PageAuthCheck } from '@/components/auth/page-auth-check'
+import { Toaster } from '@/components/ui/toaster'
 
 // Navigation removed - dashboard pages have their own sidebar navigation
 
@@ -44,6 +45,7 @@ export default function RootLayout({
           <div className="min-h-screen bg-gray-50">
             {children}
           </div>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
