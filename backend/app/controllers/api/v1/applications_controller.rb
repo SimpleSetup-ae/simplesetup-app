@@ -369,11 +369,42 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   end
   
   def serialize_admin_application(company)
-    serialize_application(company).merge(
-      owner: company.owner ? { id: company.owner.id, email: company.owner.email } : nil,
-      document_count: company.documents.count,
-      last_activity: company.application_progress&.last_activity_at
-    )
+    # Get the first choice company name from name_options or fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
+    {
+      id: company.id,
+      companyName: first_choice_name,
+      freeZone: company.free_zone,
+      status: company.status,
+      submittedAt: (company.submitted_at || company.created_at)&.iso8601,
+      userEmail: company.owner&.email,
+      userFullName: company.owner&.full_name,
+      isAnonymous: company.anonymous_draft?,
+      packageType: determine_package_type(company),
+      estimatedAnnualTurnover: company.estimated_annual_turnover,
+      completionPercentage: company.application_progress&.percent || 0,
+      progress: company.application_progress&.percent || 0,
+      documentCount: company.documents.count,
+      lastActivity: company.application_progress&.last_activity_at&.iso8601,
+      createdAt: company.created_at.iso8601,
+      updatedAt: company.updated_at.iso8601
+    }
+  end
+  
+  def determine_package_type(company)
+    # Determine package type based on visa count and license validity
+    visa_count = company.visa_package || 0
+    license_years = company.trade_license_validity || 1
+    
+    case [license_years.to_i, visa_count.to_i]
+    when [1, 0], [1, 1]
+      'Basic'
+    when [1, 2], [1, 3], [2, 0], [2, 1]
+      'Standard'
+    else
+      'Premium'
+    end
   end
   
   def serialize_full_admin_application(company)
@@ -383,21 +414,63 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       license_status: company.license_status,
       all_documents: company.documents.map { |d| serialize_document_admin(d) },
       activity_details: company.activity_codes.map { |code| 
-        activity = BusinessActivity.find_by(activity_code: code)
-        activity ? BusinessActivitySerializer.new(activity).as_json : { code: code }
+        activity = BusinessActivity.find_by(id: code) || BusinessActivity.find_by(activity_code: code)
+        if activity
+          {
+            id: activity.id,
+            code: activity.activity_code,
+            name: activity.activity_name,
+            description: activity.activity_description,
+            activity_type: activity.activity_type,
+            regulation_type: activity.regulation_type
+          }
+        else
+          { 
+            id: code,
+            code: code, 
+            name: 'Activity Name Not Available',
+            description: 'No description available'
+          }
+        end
       }
     )
   end
   
   def serialize_person(person)
+    # Extract data from metadata if available (passport extraction data is stored here)
+    metadata = person.metadata || {}
+    
+    # Find passport document for this person
+    passport_doc = person.company.documents.find { |d| d.document_type == 'passport' && d.person_id == person.id }
+    passport_url = nil
+    
+    if passport_doc
+      begin
+        passport_url = SupabaseStorageService.get_signed_url(passport_doc.storage_path, expires_in: 3600)
+      rescue => e
+        Rails.logger.warn "Failed to get passport URL for person #{person.id}: #{e.message}"
+      end
+    end
+    
     {
       id: person.id,
       type: person.type,
       first_name: person.first_name,
+      middle_name: metadata['middle_name'],
       last_name: person.last_name,
+      gender: metadata['gender'],
+      date_of_birth: metadata['date_of_birth'],
       nationality: person.nationality,
       passport_number: person.passport_number,
-      share_percentage: person.share_percentage
+      passport_issue_date: metadata['passport_issue_date'],
+      passport_expiry_date: metadata['passport_expiry_date'],
+      passport_issue_country: metadata['passport_issue_country'],
+      passport_issue_place: metadata['passport_issue_place'],
+      share_percentage: person.share_percentage,
+      passport_file_url: passport_url,
+      email: metadata['email'],
+      phone: metadata['phone'],
+      address: metadata['address']
     }
   end
 
@@ -569,11 +642,37 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   end
   
   def serialize_document_admin(document)
-    serialize_document(document).merge(
-      storage_path: document.storage_path,
-      verified: document.verified,
+    # Get display URL for the document
+    display_url = nil
+    download_url = nil
+    
+    if document.storage_path.present?
+      begin
+        display_url = SupabaseStorageService.get_signed_url(document.storage_path, expires_in: 3600)
+        download_url = display_url # Same URL can be used for download
+      rescue => e
+        Rails.logger.warn "Failed to get document URL for #{document.id}: #{e.message}"
+      end
+    end
+    
+    {
+      id: document.id,
+      name: document.name,
+      document_type: document.document_type,
+      document_category: document.document_category,
+      file_name: document.file_name,
+      file_size: document.file_size,
+      content_type: document.content_type,
+      uploaded_at: document.uploaded_at,
       ocr_status: document.ocr_status,
-      extracted_data: document.extracted_data
-    )
+      verified: document.verified,
+      extracted_data: document.extracted_data,
+      storage_path: document.storage_path,
+      person_id: document.person_id,
+      display_url: display_url,
+      download_url: download_url,
+      is_image: document.is_image?,
+      is_pdf: document.is_pdf?
+    }
   end
 end

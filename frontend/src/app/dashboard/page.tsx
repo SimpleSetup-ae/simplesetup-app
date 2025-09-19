@@ -371,28 +371,91 @@ function DashboardLoading() {
   )
 }
 
+// Admin Dashboard Component (blank for now)
+function AdminDashboard() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+      <div className="text-6xl mb-4">📊</div>
+      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Admin Dashboard</h2>
+      <p className="text-gray-600 mb-8">Welcome to the admin dashboard. Analytics and overview coming soon.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-md">
+        <Card className="p-4">
+          <div className="text-center">
+            <div className="text-2xl mb-2">📋</div>
+            <div className="text-sm font-medium">Applications</div>
+            <div className="text-xs text-gray-500">Manage applications</div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <div className="text-2xl mb-2">🏢</div>
+            <div className="text-sm font-medium">Companies</div>
+            <div className="text-xs text-gray-500">View formed companies</div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="text-center">
+            <div className="text-2xl mb-2">👥</div>
+            <div className="text-sm font-medium">Users</div>
+            <div className="text-xs text-gray-500">Manage admin users</div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
 // Main Dashboard Page with role detection
+interface User {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  fullName: string
+  isAdmin?: boolean
+}
+
 export default function DashboardPage({
   searchParams,
 }: {
   searchParams?: { user?: string }
 }) {
-  const userRole = searchParams?.user || 'owner'
-  
-  // For Company Owner role, show the simplified dashboard
-  if (userRole === 'owner') {
-    return (
-      <Suspense fallback={<DashboardLoading />}>
-        <CompanyOwnerDashboard />
-      </Suspense>
-    )
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/auth/me', {
+          credentials: 'include'
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+  }, [])
+
+  if (loading) {
+    return <DashboardLoading />
+  }
+
+  // Check if user is admin
+  if (user?.isAdmin) {
+    return <AdminDashboard />
   }
   
-  // For other roles, could show different dashboards (future enhancement)
+  // For regular users, show the company owner dashboard
   return (
-    <div className="text-center py-12">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Dashboard for {userRole}</h2>
-      <p className="text-gray-600">This dashboard view is under development.</p>
-    </div>
+    <Suspense fallback={<DashboardLoading />}>
+      <CompanyOwnerDashboard />
+    </Suspense>
   )
 }

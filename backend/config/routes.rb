@@ -48,6 +48,17 @@ Rails.application.routes.draw do
         end
       end
       
+      # Admin routes
+      namespace :admin do
+        resources :users do
+          member do
+            post :toggle_admin
+            post :toggle_lock
+          end
+        end
+        resources :companies, only: [:index, :show]
+      end
+      
       # Pricing
       get '/pricing/quote', to: 'pricing#quote'
       get '/pricing/catalog', to: 'pricing#catalog'

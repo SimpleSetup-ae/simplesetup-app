@@ -15,7 +15,7 @@ import { PricingBanner } from '@/components/application/PricingBanner'
 import { PassportUpload } from '@/components/application/PassportUpload'
 import { 
   ArrowLeft, ArrowRight, Info, Upload, User, Building, 
-  Loader2, Check, X, Plus, Trash2, FileText, Scan 
+  Loader2, Check, X, Plus, Trash2, FileText 
 } from 'lucide-react'
 
 interface Person {
@@ -588,29 +588,6 @@ export default function MembersPage({ params }: { params: { id: string } }) {
           {/* Pricing Banner */}
           <div className="lg:col-span-1">
             <PricingBanner />
-            
-            {/* AI Extraction Info */}
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Scan className="h-4 w-4" />
-                  AI Passport Extraction
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-gray-600 space-y-2">
-                <p>Our AI automatically extracts:</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>Full name</li>
-                  <li>Date of birth</li>
-                  <li>Nationality</li>
-                  <li>Passport number</li>
-                  <li>Issue & expiry dates</li>
-                </ul>
-                <p className="text-xs pt-2">
-                  Powered by GPT-5 with 95%+ accuracy
-                </p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

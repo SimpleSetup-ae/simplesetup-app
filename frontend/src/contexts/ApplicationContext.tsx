@@ -268,7 +268,7 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
     try {
       // First, force flush any pending auto-save data
       // Clean the data to avoid nested form_data issues
-      const { id, form_data, ...cleanData } = applicationData
+      const { id, ...cleanData } = applicationData
       
       const flushResponse = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}`, {
         method: 'PATCH',

@@ -1,5 +1,5 @@
 class UserSerializer < ActiveModel::Serializer
-  attributes :id, :email, :first_name, :last_name, :created_at, :updated_at
+  attributes :id, :email, :firstName, :lastName, :fullName, :isAdmin, :created_at, :updated_at
 
   def id
     object.id
@@ -9,12 +9,20 @@ class UserSerializer < ActiveModel::Serializer
     object.email
   end
 
-  def first_name
+  def firstName
     object.first_name
   end
 
-  def last_name
+  def lastName
     object.last_name
+  end
+
+  def fullName
+    object.full_name
+  end
+
+  def isAdmin
+    object.admin?
   end
 
   def created_at
