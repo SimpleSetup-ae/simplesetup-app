@@ -362,9 +362,9 @@ class Api::V1::CompaniesController < ApplicationController
       
       # Key Documents
       documents: {
-        trade_license: trade_license_doc ? serialize_document(trade_license_doc) : nil,
-        certificate_of_incorporation: moa_doc ? serialize_document(moa_doc) : nil,
-        register_of_directors: aoa_doc ? serialize_document(aoa_doc) : nil
+        trade_license: trade_license_doc ? DocumentSerializer.serialize(trade_license_doc, include_urls: true) : nil,
+        certificate_of_incorporation: moa_doc ? DocumentSerializer.serialize(moa_doc, include_urls: true) : nil,
+        register_of_directors: aoa_doc ? DocumentSerializer.serialize(aoa_doc, include_urls: true) : nil
       }
     })
   end

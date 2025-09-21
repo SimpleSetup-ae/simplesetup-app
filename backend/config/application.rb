@@ -48,5 +48,9 @@ module SimpleSetupApi
       g.javascripts false
       g.helper false
     end
+
+    # Ensure lib is autoloaded
+    config.autoload_paths << Rails.root.join('lib')
+    config.eager_load_paths << Rails.root.join('lib')
   end
 end

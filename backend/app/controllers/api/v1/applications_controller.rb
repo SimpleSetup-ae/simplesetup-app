@@ -364,7 +364,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       # Include database records
       shareholders: company.shareholders.any? ? company.shareholders.map { |s| serialize_person(s) } : merged_data['shareholders'],
       directors: company.directors.any? ? company.directors.map { |d| serialize_person(d) } : merged_data['directors'],
-      documents: company.documents.map { |d| serialize_document(d) }
+      documents: DocumentSerializer.collection(company.documents)
     )
   end
   
@@ -412,7 +412,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       owner: company.owner ? UserSerializer.new(company.owner).as_json : nil,
       license_number: company.license_number,
       license_status: company.license_status,
-      all_documents: company.documents.map { |d| serialize_document_admin(d) },
+      all_documents: company.documents.map { |d| DocumentSerializer.serialize(d, include_urls: true, admin: true) },
       activity_details: company.activity_codes.map { |code| 
         activity = BusinessActivity.find_by(id: code) || BusinessActivity.find_by(activity_code: code)
         if activity
@@ -631,48 +631,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     raise
   end
   
-  def serialize_document(document)
-    {
-      id: document.id,
-      name: document.name,
-      document_type: document.document_type,
-      uploaded_at: document.uploaded_at,
-      file_size: document.file_size
-    }
-  end
+  # document serialization handled by DocumentSerializer
   
-  def serialize_document_admin(document)
-    # Get display URL for the document
-    display_url = nil
-    download_url = nil
-    
-    if document.storage_path.present?
-      begin
-        display_url = SupabaseStorageService.get_signed_url(document.storage_path, expires_in: 3600)
-        download_url = display_url # Same URL can be used for download
-      rescue => e
-        Rails.logger.warn "Failed to get document URL for #{document.id}: #{e.message}"
-      end
-    end
-    
-    {
-      id: document.id,
-      name: document.name,
-      document_type: document.document_type,
-      document_category: document.document_category,
-      file_name: document.file_name,
-      file_size: document.file_size,
-      content_type: document.content_type,
-      uploaded_at: document.uploaded_at,
-      ocr_status: document.ocr_status,
-      verified: document.verified,
-      extracted_data: document.extracted_data,
-      storage_path: document.storage_path,
-      person_id: document.person_id,
-      display_url: display_url,
-      download_url: download_url,
-      is_image: document.is_image?,
-      is_pdf: document.is_pdf?
-    }
-  end
+  # admin document serialization handled by DocumentSerializer
 end
