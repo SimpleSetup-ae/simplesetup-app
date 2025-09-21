@@ -205,4 +205,4 @@ If you encounter issues:
 - [Expo Documentation](https://docs.expo.dev/)
 - [Playwright Documentation](https://playwright.dev/)
 - [Supabase Documentation](https://supabase.com/docs)
-- [Clerk Documentation](https://clerk.com/docs)
+ 

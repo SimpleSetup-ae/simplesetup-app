@@ -5,7 +5,7 @@ Ruby on Rails API backend for the Simple Setup Corporate Tax Registration Agent.
 ## Tech Stack
 - Ruby on Rails 7.x
 - Supabase PostgreSQL
-- Clerk Authentication
+ - Devise Authentication
 - Sidekiq for background jobs
 - Redis for caching and job queues
 

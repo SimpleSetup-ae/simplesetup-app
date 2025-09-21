@@ -3,7 +3,6 @@ import { z } from 'zod'
 // User schemas
 export const UserSchema = z.object({
   id: z.string().uuid(),
-  clerk_id: z.string(),
   email: z.string().email(),
   first_name: z.string().optional(),
   last_name: z.string().optional(),

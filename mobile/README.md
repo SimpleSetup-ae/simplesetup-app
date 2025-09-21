@@ -6,7 +6,7 @@ React Native mobile application built with Expo for iOS and Android.
 - Expo SDK
 - React Native
 - TypeScript
-- Clerk Authentication
+ - Devise-backed API Authentication
 - React Query
 - NativeWind (Tailwind for React Native)
 
