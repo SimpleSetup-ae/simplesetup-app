@@ -75,17 +75,19 @@ export function BusinessActivitiesSelector({
     }
   }, [availableActivities]);
 
-  // Handle search input
+  // Handle search input with debouncing
   const handleSearchChange = useCallback((value: string) => {
     setSearchTerm(value);
-    
-    // Debounce search
+  }, []);
+  
+  // Debounced search effect
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
-      searchActivities(value);
+      searchActivities(searchTerm);
     }, 300);
     
     return () => clearTimeout(timeoutId);
-  }, [searchActivities]);
+  }, [searchTerm, searchActivities]);
 
   // Toggle activity selection
   const toggleActivity = useCallback((activity: BusinessActivity) => {

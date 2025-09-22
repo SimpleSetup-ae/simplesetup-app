@@ -13,11 +13,15 @@ import Link from 'next/link'
 // Use API for real data
 
 interface BusinessActivity {
-  id: number;
+  id: string;
   activity_code: string;
   activity_name: string;
   activity_description: string;
   activity_type: string;
+  regulation_type?: string;
+  freezone?: string;
+  notes?: string;
+  property_requirements?: string;
 }
 
 export default function BusinessActivitiesPage() {
