@@ -1,24 +1,5 @@
 class AddPerformanceIndexesAndConstraints < ActiveRecord::Migration[7.1]
   def change
-    # Helper method to check if foreign key exists
-    def foreign_key_exists?(table, column_or_options = {})
-      if column_or_options.is_a?(Hash)
-        column = column_or_options[:column]
-        referenced_table = column_or_options[:to_table] || table.to_s.classify.constantize.reflections[column_or_options[:to_table]&.to_s || 'id']&.table_name
-      else
-        column = column_or_options
-        referenced_table = nil
-      end
-
-      foreign_keys = connection.foreign_keys(table.to_s)
-      foreign_keys.any? do |fk|
-        if referenced_table
-          fk.column == column.to_s && fk.to_table == referenced_table
-        else
-          fk.column == column.to_s
-        end
-      end
-    end
     # Add compound indexes for common query patterns
     add_index :companies, [:status, :submitted_at], name: 'index_companies_on_status_submitted'
     add_index :companies, [:status, :owner_id], name: 'index_companies_on_status_owner'
