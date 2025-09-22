@@ -12,7 +12,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { PricingBanner } from '@/components/application/PricingBanner'
-import { Search, ArrowLeft, ArrowRight, Info, Star, Check, X } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Search, ArrowLeft, ArrowRight, Info, Star, Check, X, Plus, Lightbulb, DollarSign, Filter, HelpCircle, Sparkles } from 'lucide-react'
 import debounce from 'lodash.debounce'
 
 interface BusinessActivity {
@@ -196,140 +198,275 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
   }
   
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Activities</CardTitle>
-                <CardDescription>
-                  Select your business activities. The first 3 activities are free, additional activities incur fees.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Search */}
-                <div className="space-y-2">
-                  <Label htmlFor="search">Search Activities</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="search"
-                      placeholder="Search by name, description, or code..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-6">
+      <div className="container mx-auto px-4 max-w-6xl">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="ghost" onClick={handleBack} className="p-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Business Activities</h1>
+              <p className="text-gray-600 mt-1">Choose activities that best describe your business</p>
+            </div>
+          </div>
+
+          {/* Progress Indicator */}
+          <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                ✓
+              </div>
+              <span>License</span>
+            </div>
+            <div className="w-8 h-0.5 bg-green-500"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                2
+              </div>
+              <span className="font-medium text-blue-600">Activities</span>
+            </div>
+            <div className="w-8 h-0.5 bg-gray-300"></div>
+            <div className="flex items-center gap-1">
+              <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center text-gray-500 text-xs">
+                3
+              </div>
+              <span>Company Names</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Main Content */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Quick Stats */}
+            <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0">
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold">{selectedActivities.length}/10</div>
+                    <div className="text-xs sm:text-sm opacity-90">Activities</div>
                   </div>
-                  
-                  {/* Search Results */}
-                  {searchResults.length > 0 && (
-                    <div className="border rounded-lg max-h-60 overflow-y-auto">
-                      {searchResults.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="p-3 border-b hover:bg-gray-50 cursor-pointer"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium">{activity.activity_name}</div>
-                              <div className="text-sm text-gray-500">{activity.activity_description}</div>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="secondary" className="text-xs">
-                                  {activity.activity_type}
-                                </Badge>
-                                {activity.regulation_type === 'Regulated' && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    Regulated
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-green-300">
+                      {Math.min(selectedActivities.length, 3)}/3
+                    </div>
+                    <div className="text-xs sm:text-sm opacity-90">Free</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-orange-300">
+                      {Math.max(0, selectedActivities.length - 3)} × 1k
+                    </div>
+                    <div className="text-xs sm:text-sm opacity-90">Extra Cost</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Tabs defaultValue="search" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="search" className="flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Search Activities
+                </TabsTrigger>
+                <TabsTrigger value="selected" className="flex items-center gap-2">
+                  <Check className="h-4 w-4" />
+                  Selected Activities ({selectedActivities.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="search" className="space-y-6">
+                {/* Smart Search */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-blue-500" />
+                      Find Your Business Activities
+                    </CardTitle>
+                    <CardDescription>
+                      Search by name, description, or code. The first 3 activities are free!
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                      <Input
+                        placeholder="Search activities... (e.g., 'consulting', 'ecommerce', 'trading')"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 text-lg py-3"
+                      />
+                    </div>
+
+                    {/* Filter Options */}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Select onValueChange={setSearchTerm}>
+                        <SelectTrigger className="w-full sm:w-auto">
+                          <SelectValue placeholder="💡 Popular Searches" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="consulting">Management Consulting</SelectItem>
+                          <SelectItem value="ecommerce">E-commerce</SelectItem>
+                          <SelectItem value="trading">General Trading</SelectItem>
+                          <SelectItem value="technology">IT Services</SelectItem>
+                          <SelectItem value="advertising">Advertising</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select defaultValue="all">
+                        <SelectTrigger className="w-full sm:w-auto">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="Professional">Professional</SelectItem>
+                          <SelectItem value="Commercial">Commercial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Search Results */}
+                    {searchResults.length > 0 && (
+                      <div className="border rounded-lg max-h-80 overflow-y-auto">
+                        {searchResults.map((activity) => (
+                          <div
+                            key={activity.id}
+                            className="p-4 border-b hover:bg-blue-50 cursor-pointer transition-colors"
+                            onClick={() => handleAddActivity(activity)}
+                          >
+                            <div className="flex flex-col sm:flex-row justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <h4 className="font-semibold text-gray-900 text-base sm:text-lg">{activity.activity_name}</h4>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {activity.activity_code}
                                   </Badge>
-                                )}
-                                {selectedActivities.length < 3 && (
-                                  <Badge variant="default" className="text-xs bg-green-500">
-                                    Free
+                                  <Badge variant={activity.activity_type === 'Professional' ? 'default' : 'outline'}>
+                                    {activity.activity_type}
                                   </Badge>
+                                  {activity.regulation_type === 'Regulated' && (
+                                    <Badge variant="destructive">Regulated</Badge>
+                                  )}
+                                  {selectedActivities.length < 3 && (
+                                    <Badge variant="default" className="bg-green-500 text-white">
+                                      <Star className="h-3 w-3 mr-1" />
+                                      Free
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{activity.activity_description}</p>
+                                {activity.notes && (
+                                  <p className="text-xs text-gray-500">{activity.notes}</p>
                                 )}
                               </div>
+                              <Button size="sm" className="shrink-0 self-start sm:self-center w-full sm:w-auto">
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Activity
+                              </Button>
                             </div>
-                            <Button size="sm" variant="ghost">
-                              Add
-                            </Button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {searching && (
-                    <div className="text-center py-4 text-gray-500">
-                      Searching activities...
-                    </div>
-                  )}
-                </div>
-                
-                {/* Activity Counter & Pricing Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold text-blue-900">Business Activities Summary</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('/business-activities', '_blank')}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                    >
-                      Research Activities
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Included Activities:</span>
-                      <span className="ml-2 font-semibold text-green-600">{Math.min(selectedActivities.length, 3)}/3 Free</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Additional Activities:</span>
-                      <span className="ml-2 font-semibold text-orange-600">
-                        {Math.max(0, selectedActivities.length - 3)} × AED 1,000
-                      </span>
-                    </div>
-                  </div>
-                  {selectedActivities.length > 3 && (
-                    <div className="mt-2 pt-2 border-t border-blue-200">
-                      <span className="text-sm text-gray-600">Additional Cost: </span>
-                      <span className="font-bold text-orange-600">
-                        AED {((selectedActivities.length - 3) * 1000).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    )}
 
-                {/* Business Activity Slots */}
-                <div className="space-y-2">
-                  <Label>Business Activities (Maximum 10)</Label>
-                  <div className="space-y-3">
-                    {/* Render 3 skeleton slots */}
-                    {[0, 1, 2].map((slotIndex) => {
-                      const activity = selectedActivities[slotIndex];
-                      return (
-                        <div
-                          key={`slot-${slotIndex}`}
-                          className={`border-2 rounded-lg p-4 ${
-                            activity 
-                              ? activity.is_main 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-green-500 bg-green-50'
-                              : 'border-dashed border-gray-300 bg-gray-50'
-                          }`}
-                        >
-                          {activity ? (
-                            <div className="flex justify-between items-start">
+                    {searching && (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                        <p className="text-gray-500 mt-2">Searching activities...</p>
+                      </div>
+                    )}
+
+                    {!searching && searchTerm && searchResults.length === 0 && (
+                      <div className="text-center py-8">
+                        <Search className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500">No activities found for "{searchTerm}"</p>
+                        <p className="text-sm text-gray-400 mt-1">Try a different search term or browse popular activities</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Tips Card */}
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Lightbulb className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-yellow-800 mb-2">💡 Pro Tips</h4>
+                        <ul className="text-sm text-yellow-700 space-y-1">
+                          <li>• The first 3 activities are completely free</li>
+                          <li>• Choose your main activity first - it's most important for your license</li>
+                          <li>• Professional activities often have fewer restrictions</li>
+                          <li>• Consider activities that complement each other</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="selected" className="space-y-6">
+                {/* Selected Activities Management */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Check className="h-5 w-5 text-green-500" />
+                      Your Selected Activities
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your activities. Drag to reorder or click to modify.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {selectedActivities.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Plus className="h-8 w-8 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No activities selected yet</h3>
+                        <p className="text-gray-500 mb-4">Start by searching for activities that match your business</p>
+                        <Button onClick={() => {}} variant="outline">
+                          Start Searching
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedActivities.map((activity, index) => (
+                          <div
+                            key={activity.activity_id}
+                            className={`border-2 rounded-lg p-4 transition-all ${
+                              activity.is_main
+                                ? 'border-blue-500 bg-blue-50'
+                                : index < 3
+                                  ? 'border-green-500 bg-green-50'
+                                  : 'border-orange-500 bg-orange-50'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start gap-4">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="font-bold text-lg text-gray-900">
+                                    {index + 1}.
+                                  </span>
                                   <span className="font-medium">{activity.activity_name}</span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {activity.activity_id}
+                                  </Badge>
                                   {activity.is_main && (
-                                    <Badge className="bg-blue-500">Main Activity</Badge>
+                                    <Badge className="bg-blue-500 text-white">
+                                      Main Activity
+                                    </Badge>
                                   )}
-                                  <Badge variant="default" className="bg-green-500">Free</Badge>
+                                  {index < 3 ? (
+                                    <Badge className="bg-green-500 text-white">Free</Badge>
+                                  ) : (
+                                    <Badge variant="destructive" className="bg-orange-500">
+                                      <DollarSign className="h-3 w-3 mr-1" />
+                                      1,000 AED
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex gap-2">
@@ -351,94 +488,55 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
                                 </Button>
                               </div>
                             </div>
-                          ) : (
-                            <div className="text-center py-4">
-                              <div className="text-gray-500 mb-2">
-                                {slotIndex === 0 ? 'Main Business Activity' : `Business Activity ${slotIndex + 1}`}
-                              </div>
-                              <div className="text-sm text-green-600 font-medium">Free Slot</div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                Search and select an activity above
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                    
-                    {/* Additional paid activities */}
-                    {selectedActivities.slice(3).map((activity, index) => (
-                      <div
-                        key={activity.activity_id}
-                        className="border-2 border-orange-500 bg-orange-50 rounded-lg p-4"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{activity.activity_name}</span>
-                              <Badge variant="destructive" className="bg-orange-500">
-                                AED 1,000
-                              </Badge>
-                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            {!activity.is_main && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSetMain(activity.activity_id)}
-                              >
-                                Set as Main
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleRemoveActivity(activity.activity_id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  
-                  {selectedActivities.length < 3 && (
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Tip:</strong> The first 3 activities are free. We recommend selecting at least 3 activities to maximize your license value.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {/* Additional Options */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5" />
+                  Additional Options
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 {/* Custom Activity Request */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="custom"
                       checked={requestCustom}
                       onCheckedChange={(checked) => setRequestCustom(checked as boolean)}
                     />
-                    <Label htmlFor="custom">Request a custom activity not listed above</Label>
+                    <Label htmlFor="custom" className="font-medium">
+                      Request a custom activity not listed above
+                    </Label>
                   </div>
-                  
+
                   {requestCustom && (
-                    <Textarea
-                      placeholder="Describe your custom business activity..."
-                      value={customDescription}
-                      onChange={(e) => setCustomDescription(e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                    />
+                    <div className="pl-6">
+                      <Textarea
+                        placeholder="Describe your custom business activity in detail..."
+                        value={customDescription}
+                        onChange={(e) => setCustomDescription(e.target.value)}
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        We'll review your request and get back to you within 24 hours
+                      </p>
+                    </div>
                   )}
                 </div>
-                
+
                 {/* Countries of Operation */}
-                <div className="space-y-2">
-                  <Label>Countries of Operation</Label>
+                <div className="space-y-3">
+                  <Label className="font-medium">Countries of Operation</Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="uae"
@@ -448,74 +546,103 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
                     <Label htmlFor="uae">United Arab Emirates (Required)</Label>
                   </div>
                 </div>
-                
+
                 {/* Franchise */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="franchise"
                       checked={operateAsFranchise}
                       onCheckedChange={(checked) => setOperateAsFranchise(checked as boolean)}
                     />
-                    <Label htmlFor="franchise">Will you operate as a franchise?</Label>
+                    <Label htmlFor="franchise" className="font-medium">
+                      Will you operate as a franchise?
+                    </Label>
                   </div>
-                  
+
                   {operateAsFranchise && (
-                    <Textarea
-                      placeholder="Provide franchise details..."
-                      value={franchiseDetails}
-                      onChange={(e) => setFranchiseDetails(e.target.value)}
-                      className="mt-2"
-                      rows={2}
-                    />
+                    <div className="pl-6">
+                      <Textarea
+                        placeholder="Provide franchise details including franchisor name, agreement terms, etc..."
+                        value={franchiseDetails}
+                        onChange={(e) => setFranchiseDetails(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
                   )}
                 </div>
-                
+
                 {/* Accept Rules */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-start space-x-3">
                   <Checkbox
                     id="accept"
                     checked={acceptRules}
                     onCheckedChange={(checked) => setAcceptRules(checked as boolean)}
+                    className="mt-1"
                   />
-                  <Label htmlFor="accept" className="text-sm">
-                    I understand and accept the rules and regulations for the selected business activities
-                  </Label>
+                  <div>
+                    <Label htmlFor="accept" className="text-sm font-medium cursor-pointer">
+                      I understand and accept the rules and regulations for the selected business activities
+                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      By checking this, you confirm you understand the regulatory requirements for your chosen activities
+                    </p>
+                  </div>
                 </div>
-                
-                {/* Errors */}
-                {errors.length > 0 && (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      <ul className="list-disc pl-4">
-                        {errors.map((error, index) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {/* Navigation */}
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button onClick={validateAndContinue}>
-                    Continue
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
+              </CardContent>
+            </Card>
+
+            {/* Navigation */}
+            <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6">
+              <Button variant="outline" onClick={handleBack} size="lg" className="order-2 sm:order-1">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to License
+              </Button>
+              <Button onClick={validateAndContinue} size="lg" className="px-8 order-1 sm:order-2 w-full sm:w-auto">
+                Continue to Names
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="xl:col-span-1 space-y-6">
+            <PricingBanner />
+
+            {/* Help Card */}
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <HelpCircle className="h-5 w-5 text-purple-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-purple-800 mb-2">Need Help?</h4>
+                    <p className="text-sm text-purple-700 mb-3">
+                      Not sure which activities to choose? Our experts can help you select the right ones for your business.
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full border-purple-300 text-purple-700 hover:bg-purple-100">
+                      Get Expert Help
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
-          {/* Pricing Banner */}
-          <div className="lg:col-span-1">
-            <PricingBanner />
-          </div>
         </div>
+
+        {/* Error Display */}
+        {errors.length > 0 && (
+          <div className="fixed bottom-4 right-4 max-w-md">
+            <Alert variant="destructive">
+              <AlertDescription>
+                <ul className="list-disc pl-4">
+                  {errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
       </div>
     </div>
   )
