@@ -24,7 +24,8 @@ export async function middleware(request: NextRequest) {
     '/sign-in',
     '/sign-up',
     '/demo-form',
-    '/business-activities'
+    '/business-activities',
+    '/application'
   ]
   
   // Allow public routes
