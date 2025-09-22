@@ -28,27 +28,12 @@ class Api::V1::OtpController < Api::V1::BaseController
     password = params[:password]
     draft_token = params[:draft_token]
     
-    if email.blank? || password.blank?
+    # Validate email and password using AuthValidator
+    validation_errors = AuthValidator.validate(email: email, password: password)
+    if validation_errors.any?
       render json: {
         success: false,
-        message: 'Email and password are required'
-      }, status: :bad_request
-      return
-    end
-    
-    unless valid_email?(email)
-      render json: {
-        success: false,
-        message: 'Please provide a valid email address'
-      }, status: :bad_request
-      return
-    end
-    
-    # Validate password strength
-    unless valid_password?(password)
-      render json: {
-        success: false,
-        message: 'Password must be at least 8 characters and contain uppercase, lowercase, and numbers'
+        message: validation_errors.first
       }, status: :bad_request
       return
     end
@@ -100,18 +85,12 @@ class Api::V1::OtpController < Api::V1::BaseController
   def send_otp
     email = params[:email]&.downcase&.strip
     
-    if email.blank?
+    # Validate email using AuthValidator
+    validation_errors = AuthValidator.validate(email: email)
+    if validation_errors.any?
       render json: {
         success: false,
-        message: 'Email address is required'
-      }, status: :bad_request
-      return
-    end
-    
-    unless valid_email?(email)
-      render json: {
-        success: false,
-        message: 'Please provide a valid email address'
+        message: validation_errors.first
       }, status: :bad_request
       return
     end
@@ -262,17 +241,7 @@ class Api::V1::OtpController < Api::V1::BaseController
   
   private
   
-  def valid_email?(email)
-    email =~ /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z\d\-]+)*\.[a-z]+\z/i
-  end
-  
-  def valid_password?(password)
-    return false if password.length < 8
-    return false unless password =~ /[A-Z]/ # Has uppercase
-    return false unless password =~ /[a-z]/ # Has lowercase
-    return false unless password =~ /[0-9]/ # Has number
-    true
-  end
+  # validation logic moved to AuthValidator
   
   def generate_jwt_token(user)
     # This is a simple implementation. In production, you'd want to use

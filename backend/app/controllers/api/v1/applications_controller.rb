@@ -124,8 +124,8 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     Rails.logger.info "After transform - gm_signatory_name: #{@company.gm_signatory_name}, ubo_terms_accepted: #{@company.ubo_terms_accepted}"
     
     # Validate all required fields
-    validation_errors = validate_submission(@company)
-    
+    validation_errors = CompanySubmissionValidator.validate(@company)
+
     if validation_errors.any?
       render json: {
         success: false,
@@ -283,21 +283,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     )
   end
   
-  def validate_submission(company)
-    errors = []
-    
-    # Check required fields based on form steps
-    errors << "License validity required" if company.trade_license_validity.blank?
-    errors << "Business activities required" if company.activity_codes.blank?
-    errors << "Company name options required" if company.name_options.blank?
-    errors << "Share capital required" if company.share_capital.blank?
-    errors << "At least one shareholder required" if company.shareholders.empty?
-    errors << "At least one director required" if company.directors.empty?
-    errors << "GM signatory name required" if company.gm_signatory_name.blank?
-    errors << "Terms must be accepted" unless company.ubo_terms_accepted?
-    
-    errors
-  end
+  # validation logic moved to CompanySubmissionValidator
   
   def serialize_application(company)
     {

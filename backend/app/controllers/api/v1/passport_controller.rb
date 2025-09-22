@@ -11,13 +11,13 @@ class Api::V1::PassportController < Api::V1::BaseController
     entity_type = params[:entity_type]
     entity_name = params[:entity_name]
     
-    unless file.present?
-      return render json: { error: 'No file provided' }, status: :unprocessable_entity
-    end
-    
-    # Validate file type and size
-    unless valid_file?(file)
-      return render json: { error: 'Invalid file format or size' }, status: :unprocessable_entity
+    # Validate file using FileValidator
+    validation_errors = FileValidator.validate(file)
+    if validation_errors.any?
+      return render json: {
+        success: false,
+        error: validation_errors.first
+      }, status: :unprocessable_entity
     end
     
     begin
@@ -72,12 +72,7 @@ class Api::V1::PassportController < Api::V1::BaseController
   
   private
   
-  def valid_file?(file)
-    valid_types = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
-    max_size = 10.megabytes
-    
-    valid_types.include?(file.content_type) && file.size <= max_size
-  end
+  # validation logic moved to FileValidator
   
   def current_company
     # Return nil for testing without authentication
