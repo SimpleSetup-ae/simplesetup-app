@@ -56,3 +56,4 @@
 - Follow established patterns from existing pages
 - Ensure proper authorization on all admin features
 - Use existing API patterns and extend as needed
+

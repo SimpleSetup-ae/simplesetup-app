@@ -128,3 +128,4 @@
 | **Security** | ✅ Complete | Role-based access control |
 
 The admin dashboard is now fully functional and ready for testing with the admin credentials provided.
+
