@@ -49,11 +49,32 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom gradient colors for Simple Setup design system
+        // Simple Setup Brand Colors (Orange Theme)
+        'brand': {
+          DEFAULT: 'hsl(20 100% 54%)', // Bright Orange - Primary CTAs, highlights, step numbers
+          50: 'hsl(20 100% 97%)',      // Light orange backgrounds
+          100: 'hsl(20 100% 94%)',
+          200: 'hsl(20 100% 88%)',
+          300: 'hsl(20 100% 78%)',
+          400: 'hsl(20 100% 68%)',      // Border states
+          500: 'hsl(20 100% 54%)',      // Primary orange
+          600: 'hsl(20 95% 45%)',
+          700: 'hsl(20 90% 38%)',
+          800: 'hsl(20 85% 32%)',
+          900: 'hsl(20 80% 26%)',
+        },
+        'success': {
+          DEFAULT: 'hsl(142 69% 58%)', // Green for checkmarks, confirmations
+          50: 'hsl(142 69% 97%)',
+          100: 'hsl(142 69% 94%)',
+          500: 'hsl(142 69% 58%)',
+          600: 'hsl(142 69% 50%)',
+        },
+        // Legacy colors (keep for compatibility)
         'gradient-start': '#000000',
         'gradient-end': '#C0C0C0',
-        'orange-gradient-start': '#FFA500',
-        'orange-gradient-end': '#C0C0C0',
+        'orange-gradient-start': 'hsl(20 100% 54%)',
+        'orange-gradient-end': 'hsl(20 100% 68%)',
       },
       borderRadius: {
         lg: "var(--radius)",

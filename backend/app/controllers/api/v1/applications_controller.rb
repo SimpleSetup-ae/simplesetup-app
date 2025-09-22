@@ -1,5 +1,6 @@
 class Api::V1::ApplicationsController < Api::V1::BaseController
   skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
+  skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim]
   before_action :set_company, except: [:create, :index, :admin_index]
   before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
   
