@@ -341,7 +341,13 @@ class Api::V1::OtpController < Api::V1::BaseController
     end
 
     user = authenticate_user_with_password(email, password)
-    return unless user
+    unless user
+      render json: {
+        success: false,
+        message: 'Invalid email or password'
+      }, status: :unauthorized
+      return
+    end
 
     # Verify OTP as additional security layer
     if user.verify_otp(otp_code)
