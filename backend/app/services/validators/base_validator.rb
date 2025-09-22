@@ -1,6 +1,10 @@
 class BaseValidator
-  def self.validate(*args)
-    new(*args).validate
+  def self.validate(*args, **kwargs)
+    if kwargs.any?
+      new(**kwargs).validate
+    else
+      new(*args).validate
+    end
   end
 
   def validate
