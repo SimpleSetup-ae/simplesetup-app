@@ -1,9 +1,14 @@
 class Api::V1::BaseController < ApplicationController
   include ErrorHandler
+  include JwtAuthenticatable
 
   # Devise authentication is handled by ApplicationController
+  # JWT authentication is handled by JwtAuthenticatable concern
 
   before_action :set_request_id
+
+  # Skip JWT auth for authentication endpoints
+  skip_jwt_auth :authenticate, :check_user, :register, :send_otp, :verify_otp, :resend_otp, :login
 
   private
 

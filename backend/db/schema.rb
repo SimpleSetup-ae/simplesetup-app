@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_22_083326) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -157,14 +157,22 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.boolean "ubo_terms_accepted", default: false
     t.boolean "accept_activity_rules", default: false
     t.datetime "last_auto_save_at"
+    t.index ["activity_codes"], name: "index_companies_activity_codes", using: :gin
+    t.index ["countries_of_operation"], name: "index_companies_countries_of_operation", using: :gin
     t.index ["deleted_at"], name: "index_companies_on_deleted_at"
     t.index ["draft_token"], name: "index_companies_on_draft_token", unique: true
+    t.index ["formation_step"], name: "index_companies_formation_step"
     t.index ["formation_step"], name: "index_companies_on_formation_step"
+    t.index ["formation_type"], name: "index_companies_formation_type"
     t.index ["formation_type"], name: "index_companies_on_formation_type"
     t.index ["license_number"], name: "index_companies_on_license_number", unique: true
+    t.index ["metadata"], name: "index_companies_metadata", using: :gin
+    t.index ["name_options"], name: "index_companies_name_options", using: :gin
     t.index ["owner_id"], name: "index_companies_on_owner_id"
     t.index ["status", "owner_id"], name: "index_companies_on_status_and_owner"
+    t.index ["status", "owner_id"], name: "index_companies_on_status_owner"
     t.index ["status", "submitted_at"], name: "index_companies_on_status_and_submitted"
+    t.index ["status", "submitted_at"], name: "index_companies_on_status_submitted"
     t.index ["submitted_at"], name: "index_companies_on_submitted_at"
   end
 
@@ -249,23 +257,32 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.string "issuing_country"
     t.string "issuing_authority"
     t.index "((fraud_assessment ->> 'risk_band'::text))", name: "index_documents_on_fraud_risk_band", where: "(fraud_assessment IS NOT NULL)"
+    t.index ["company_id", "document_type", "verified"], name: "index_documents_on_company_type_verified"
+    t.index ["company_id", "document_type"], name: "index_documents_on_company_type"
     t.index ["company_id"], name: "index_documents_on_company_id"
     t.index ["deleted_at"], name: "index_documents_on_deleted_at"
+    t.index ["document_category"], name: "index_documents_document_category"
     t.index ["document_category"], name: "index_documents_on_document_category"
     t.index ["document_sub_type"], name: "index_documents_on_document_sub_type"
     t.index ["document_type"], name: "index_documents_on_document_type"
     t.index ["expiry_date"], name: "index_documents_on_expiry_date"
+    t.index ["extracted_data"], name: "index_documents_extracted_data", using: :gin
     t.index ["extracted_data"], name: "index_documents_on_extracted_data", using: :gin
+    t.index ["fraud_assessment"], name: "index_documents_fraud_assessment", using: :gin
     t.index ["fraud_assessment"], name: "index_documents_on_fraud_assessment", using: :gin
     t.index ["is_ubo_document"], name: "index_documents_on_is_ubo_document"
+    t.index ["ocr_status"], name: "index_documents_ocr_status"
     t.index ["ocr_status"], name: "index_documents_on_ocr_status"
     t.index ["parent_company_id"], name: "index_documents_on_parent_company_id"
     t.index ["person_id"], name: "index_documents_on_person_id"
     t.index ["storage_path"], name: "index_documents_on_storage_path", unique: true
     t.index ["uploaded_at"], name: "index_documents_on_uploaded_at"
+    t.index ["user_id", "document_type"], name: "index_documents_on_user_type"
     t.index ["user_id"], name: "index_documents_on_user_id"
     t.index ["verified"], name: "index_documents_on_verified"
+    t.index ["verified"], name: "index_documents_verified"
     t.index ["workflow_step_id"], name: "index_documents_on_workflow_step_id"
+    t.check_constraint "ocr_status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'completed'::character varying, 'failed'::character varying]::text[])", name: "documents_ocr_status_check"
   end
 
   create_table "freezones", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -348,7 +365,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.datetime "deleted_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["company_id", "status", "paid_at"], name: "index_payments_on_company_status_paid"
     t.index ["company_id", "status"], name: "index_payments_on_company_id_and_status"
+    t.index ["company_id", "status"], name: "index_payments_on_company_status"
     t.index ["company_id"], name: "index_payments_on_company_id"
     t.index ["deleted_at"], name: "index_payments_on_deleted_at"
     t.index ["paid_at"], name: "index_payments_on_paid_at"
@@ -356,6 +375,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.index ["status"], name: "index_payments_on_status"
     t.index ["stripe_payment_intent_id"], name: "index_payments_on_stripe_payment_intent_id", unique: true
     t.index ["workflow_step_id"], name: "index_payments_on_workflow_step_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'processing'::character varying, 'paid'::character varying, 'failed'::character varying, 'refunded'::character varying, 'cancelled'::character varying]::text[])", name: "payments_status_check"
   end
 
   create_table "people", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -380,6 +400,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.float "passport_extraction_confidence"
     t.index ["company_id", "type"], name: "index_people_on_company_id_and_type"
     t.index ["company_id"], name: "index_people_on_company_id"
+    t.index ["contact_info"], name: "index_people_contact_info", using: :gin
     t.index ["deleted_at"], name: "index_people_on_deleted_at"
     t.index ["emirates_id"], name: "index_people_on_emirates_id"
     t.index ["passport_expiry_date"], name: "index_people_on_passport_expiry_date"
@@ -458,6 +479,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.index ["requested_by_id"], name: "index_requests_on_requested_by_id"
     t.index ["status"], name: "index_requests_on_status"
     t.index ["submitted_at"], name: "index_requests_on_submitted_at"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'rejected'::character varying, 'cancelled'::character varying]::text[])", name: "requests_status_check"
   end
 
   create_table "service_fees", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -521,6 +543,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["company_id", "registration_type"], name: "index_tax_registrations_on_company_id_and_registration_type", unique: true
+    t.index ["company_id", "status"], name: "index_tax_registrations_on_company_status"
     t.index ["company_id"], name: "index_tax_registrations_on_company_id"
     t.index ["deleted_at"], name: "index_tax_registrations_on_deleted_at"
     t.index ["next_filing_date"], name: "index_tax_registrations_on_next_filing_date"
@@ -608,6 +631,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["application_number"], name: "index_visa_applications_on_application_number", unique: true, where: "(application_number IS NOT NULL)"
+    t.index ["company_id", "person_id", "status"], name: "index_visa_applications_on_company_person_status"
     t.index ["company_id", "status"], name: "index_visa_applications_on_company_id_and_status"
     t.index ["company_id"], name: "index_visa_applications_on_company_id"
     t.index ["deleted_at"], name: "index_visa_applications_on_deleted_at"
@@ -616,6 +640,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.index ["submitted_at"], name: "index_visa_applications_on_submitted_at"
     t.index ["visa_number"], name: "index_visa_applications_on_visa_number", unique: true, where: "(visa_number IS NOT NULL)"
     t.index ["visa_type"], name: "index_visa_applications_on_visa_type"
+    t.check_constraint "status::text = ANY (ARRAY['entry_permit'::character varying, 'medical'::character varying, 'eid_appointment'::character varying, 'stamping'::character varying, 'completed'::character varying, 'rejected'::character varying]::text[])", name: "visa_applications_status_check"
   end
 
   create_table "workflow_instances", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -635,6 +660,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.index ["deleted_at"], name: "index_workflow_instances_on_deleted_at"
     t.index ["status"], name: "index_workflow_instances_on_status"
     t.index ["workflow_type"], name: "index_workflow_instances_on_workflow_type"
+    t.index ["workflow_type"], name: "index_workflow_instances_workflow_type"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "workflow_instances_status_check"
   end
 
   create_table "workflow_steps", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -653,8 +680,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_18_090848) do
     t.datetime "updated_at", null: false
     t.index ["status"], name: "index_workflow_steps_on_status"
     t.index ["step_type"], name: "index_workflow_steps_on_step_type"
+    t.index ["step_type"], name: "index_workflow_steps_step_type"
     t.index ["workflow_instance_id", "step_number"], name: "index_workflow_steps_on_workflow_instance_id_and_step_number", unique: true
     t.index ["workflow_instance_id"], name: "index_workflow_steps_on_workflow_instance_id"
+    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "workflow_steps_status_check"
   end
 
   add_foreign_key "application_progress", "companies", on_delete: :cascade

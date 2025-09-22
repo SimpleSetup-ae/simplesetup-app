@@ -20,7 +20,10 @@ Rails.application.routes.draw do
       # Dashboard
       get '/dashboard', to: 'dashboard#show'
       
-      # OTP Authentication
+      # Unified Authentication (supports OTP, password, and password+OTP)
+      post '/auth/authenticate', to: 'otp#authenticate'
+
+      # OTP Authentication (legacy endpoints)
       post '/auth/check_user', to: 'otp#check_user'
       post '/auth/register', to: 'otp#register'
       post '/auth/send_otp', to: 'otp#send_otp'

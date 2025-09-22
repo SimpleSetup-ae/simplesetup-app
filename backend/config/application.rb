@@ -49,12 +49,16 @@ module SimpleSetupApi
       g.helper false
     end
 
-    # Ensure lib is autoloaded
+    # Ensure lib and app/services are autoloaded
     config.autoload_paths << Rails.root.join('lib')
     config.autoload_paths << Rails.root.join('lib', 'serializers')
     config.autoload_paths << Rails.root.join('lib', 'validators')
+    config.autoload_paths << Rails.root.join('app', 'services')
+    config.autoload_paths << Rails.root.join('app', 'services', 'validators')
     config.eager_load_paths << Rails.root.join('lib')
     config.eager_load_paths << Rails.root.join('lib', 'serializers')
     config.eager_load_paths << Rails.root.join('lib', 'validators')
+    config.eager_load_paths << Rails.root.join('app', 'services')
+    config.eager_load_paths << Rails.root.join('app', 'services', 'validators')
   end
 end

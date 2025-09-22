@@ -66,6 +66,9 @@ gem "dotenv-rails"
 # JSON serialization
 gem "active_model_serializers"
 
+# JWT tokens
+gem "jwt"
+
 # HTTP client
 gem "faraday"
 

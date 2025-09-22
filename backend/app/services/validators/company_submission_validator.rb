@@ -19,7 +19,8 @@ class CompanySubmissionValidator < BaseValidator
     # Additional validations for company formation
     add_error "Company name is required" if @company.name.blank?
     add_error "Free zone is required" if @company.free_zone.blank?
-    add_error "At least one document is required" if @company.documents.empty?
+    # TODO: Re-enable document validation once document upload step is added to main workflow
+    # add_error "At least one document is required" if @company.documents.empty?
 
     # Validate shareholder details
     @company.shareholders.each do |shareholder|

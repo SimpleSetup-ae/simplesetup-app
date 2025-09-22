@@ -1,5 +1,49 @@
 class Api::V1::OtpController < Api::V1::BaseController
   skip_before_action :authenticate_user!
+
+  # POST /api/v1/auth/authenticate (Unified authentication endpoint)
+  def authenticate
+    email = params[:email]&.downcase&.strip
+    password = params[:password]
+    otp_code = params[:otp_code]
+    draft_token = params[:draft_token]
+    auth_method = params[:auth_method] || 'auto' # 'auto', 'password', 'otp', 'password_otp'
+
+    if email.blank?
+      render json: {
+        success: false,
+        message: 'Email address is required'
+      }, status: :bad_request
+      return
+    end
+
+    user = User.find_by(email: email)
+
+    unless user
+      render json: {
+        success: false,
+        message: 'Account not found'
+      }, status: :not_found
+      return
+    end
+
+    # Determine authentication method
+    auth_method = determine_auth_method(auth_method, user, password.present?, otp_code.present?)
+
+    case auth_method
+    when 'password'
+      authenticate_with_password(email, password, draft_token)
+    when 'otp'
+      authenticate_with_otp(email, otp_code, draft_token)
+    when 'password_otp'
+      authenticate_with_password_and_otp(email, password, otp_code, draft_token)
+    else
+      render json: {
+        success: false,
+        message: 'Invalid authentication method'
+      }, status: :bad_request
+    end
+  end
   
   # POST /api/v1/auth/check_user
   def check_user
@@ -238,21 +282,168 @@ class Api::V1::OtpController < Api::V1::BaseController
   def resend_otp
     send_otp # Reuse the send_otp logic
   end
-  
+
+  # Password-only authentication
+  def authenticate_with_password(email, password, draft_token)
+    if password.blank?
+      render json: {
+        success: false,
+        message: 'Password is required'
+      }, status: :bad_request
+      return
+    end
+
+    user = authenticate_user_with_password(email, password)
+
+    if user
+      response_data = generate_auth_response(user, draft_token)
+      response_data[:auth_method] = 'password'
+      render json: response_data
+    else
+      render json: {
+        success: false,
+        message: 'Invalid email or password'
+      }, status: :unauthorized
+    end
+  end
+
+  # OTP-only authentication
+  def authenticate_with_otp(email, otp_code, draft_token)
+    if otp_code.blank?
+      render json: {
+        success: false,
+        message: 'OTP code is required'
+      }, status: :bad_request
+      return
+    end
+
+    if authenticate_user_with_otp(email, otp_code)
+      user = User.find_by(email: email)
+      response_data = generate_auth_response(user, draft_token)
+      response_data[:auth_method] = 'otp'
+      render json: response_data
+    else
+      render json: {
+        success: false,
+        message: 'Invalid or expired OTP code'
+      }, status: :unauthorized
+    end
+  end
+
+  # Password + OTP authentication
+  def authenticate_with_password_and_otp(email, password, otp_code, draft_token)
+    if password.blank? || otp_code.blank?
+      render json: {
+        success: false,
+        message: 'Both password and OTP code are required'
+      }, status: :bad_request
+      return
+    end
+
+    user = authenticate_user_with_password(email, password)
+    return unless user
+
+    # Verify OTP as additional security layer
+    if user.verify_otp(otp_code)
+      response_data = generate_auth_response(user, draft_token)
+      response_data[:auth_method] = 'password_otp'
+      render json: response_data
+    else
+      render json: {
+        success: false,
+        message: 'Invalid OTP code'
+      }, status: :unauthorized
+    end
+  end
+
+  # Determine the best authentication method
+  def determine_auth_method(requested_method, user, has_password, has_otp)
+    case requested_method
+    when 'auto'
+      # Auto-determine based on user state and provided credentials
+      if user.encrypted_password.present? && has_password
+        has_otp ? 'password_otp' : 'password'
+      elsif has_otp
+        'otp'
+      else
+        'password' # Default to password if available
+      end
+    when 'password'
+      has_password ? 'password' : 'otp'
+    when 'otp'
+      has_otp ? 'otp' : 'password'
+    when 'password_otp'
+      (has_password && has_otp) ? 'password_otp' : 'password'
+    else
+      'password'
+    end
+  end
+
   private
-  
+
   # validation logic moved to AuthValidator
-  
+
   def generate_jwt_token(user)
-    # This is a simple implementation. In production, you'd want to use
-    # a proper JWT library like 'jwt' gem
-    payload = {
-      user_id: user.id,
-      email: user.email,
-      exp: 30.days.from_now.to_i
+    JwtService.encode(JwtService.access_token_payload(user))
+  end
+
+  def authenticate_user_with_password(email, password)
+    user = User.find_by(email: email)
+    return false unless user&.valid_password?(password)
+
+    # Check if user account is locked or needs confirmation
+    return false if user.locked_at.present?
+    return false if user.confirmed_at.nil? && !Rails.env.development?
+
+    user
+  end
+
+  def authenticate_user_with_otp(email, otp_code)
+    user = User.find_by(email: email)
+    return false unless user&.verify_otp(otp_code)
+
+    # Check if user account is locked
+    return false if user.locked_at.present?
+
+    user
+  end
+
+  def generate_auth_response(user, draft_token = nil)
+    token = generate_jwt_token(user)
+
+    response_data = {
+      success: true,
+      message: 'Successfully authenticated',
+      user: UserSerializer.new(user).as_json,
+      token: token,
+      token_expires_at: Time.current + 48.hours,
+      auth_method: 'otp'
     }
-    
-    # For now, using a simple base64 encoding. In production, use JWT
-    Base64.strict_encode64(payload.to_json)
+
+    # Claim draft application if draft_token provided
+    if draft_token.present?
+      company = Company.find_by(draft_token: draft_token)
+      if company&.anonymous_draft?
+        company.claim_by_user!(user)
+        response_data[:redirect_url] = '/application/continue'
+      end
+    else
+      response_data[:redirect_url] = '/dashboard'
+    end
+
+    response_data
+  end
+
+  def check_rate_limit(user)
+    return unless user.current_otp_sent_at
+    return unless user.current_otp_sent_at > 1.minute.ago
+
+    seconds_left = 60 - (Time.current - user.current_otp_sent_at).to_i
+    render json: {
+      success: false,
+      message: "Please wait #{seconds_left} seconds before requesting a new code",
+      retry_after: seconds_left
+    }, status: :too_many_requests
+    true
   end
 end
