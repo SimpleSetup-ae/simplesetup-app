@@ -44,6 +44,7 @@ interface ApplicationData {
   
   shareholders?: any[]
   directors?: any[]
+  general_manager?: any
   ubos?: any[]
   
   gm_signatory_name?: string
@@ -265,6 +266,30 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
     setError(null)
     
     try {
+      // First, force flush any pending auto-save data
+      // Clean the data to avoid nested form_data issues
+      const { id, ...cleanData } = applicationData
+      
+      const flushResponse = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          form_data: cleanData,  // Send clean data without nested form_data
+          step_name: 'final_flush'  // Special marker for final data flush
+        })
+      })
+      
+      if (!flushResponse.ok) {
+        console.error('Failed to flush data before submission')
+        const errorData = await flushResponse.json()
+        console.error('Flush error:', errorData)
+      }
+      
+      // Small delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Now submit the application
       const response = await fetch(`http://localhost:3001/api/v1/applications/${applicationData.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,6 +306,7 @@ export function ApplicationProvider({ children }: { children: ReactNode }) {
         return { success: false, errors: data.errors || ['Submission failed'] }
       }
     } catch (err) {
+      console.error('Submission error:', err)
       setError('Network error during submission')
       return { success: false, errors: ['Network error'] }
     } finally {

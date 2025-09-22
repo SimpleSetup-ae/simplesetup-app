@@ -1,6 +1,6 @@
 # Frontend - Next.js Web App
 
-Next.js 14 web application with shadcn/ui components and Clerk authentication.
+Next.js 14 web application with shadcn/ui components and Devise-backed authentication.
 
 ## Tech Stack
 - Next.js 14 with App Router

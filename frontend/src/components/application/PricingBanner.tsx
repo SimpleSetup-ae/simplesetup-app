@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
 import { useApplication } from '@/contexts/ApplicationContext'
+import { apiGet } from '@/lib/api'
 
 interface PriceItem {
   code: string
@@ -31,7 +32,7 @@ export function PricingBanner() {
       setLoading(true)
       
       try {
-        const response = await fetch(`/api/v1/pricing/quote?application_id=${applicationData.id}`)
+        const response = await apiGet(`/pricing/quote?application_id=${applicationData.id}`)
         const data = await response.json()
         
         if (data.success) {

@@ -1,0 +1,33 @@
+Application Submitted Successfully
+====================================
+
+Dear <%= @owner&.first_name || 'Applicant' %>,
+
+Thank you for submitting your company formation application. We have received your application and it is now being reviewed by our team.
+
+Application Details:
+--------------------
+Application ID: <%= @company.id.split('-').first.upcase %>
+Company Name (Primary): <%= @company.name_options&.first || 'Pending' %>
+Free Zone: <%= @company.free_zone %>
+Submitted At: <%= @company.submitted_at&.strftime('%B %d, %Y at %I:%M %p') %>
+Status: Under Review
+
+What Happens Next?
+------------------
+1. Document Review: Our team will review your submitted documents (1-2 business days)
+2. Name Approval: We'll check the availability of your chosen company names
+3. Payment Request: Once approved, you'll receive a payment link
+4. Company Formation: After payment, we'll proceed with the official registration
+5. License Issuance: Your trade license will be issued within 5-7 business days
+
+View Application Status: http://localhost:3000/dashboard
+
+Need Help?
+----------
+If you have any questions about your application, please contact our support team at support@simplesetup.ae or call +971 4 123 4567.
+
+---
+© 2024 Simple Setup. All rights reserved.
+Dubai, United Arab Emirates
+This is an automated message. Please do not reply to this email.

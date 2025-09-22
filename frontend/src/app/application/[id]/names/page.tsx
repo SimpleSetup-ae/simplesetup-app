@@ -36,6 +36,17 @@ export default function CompanyNamesPage({ params }: { params: { id: string } })
     updateProgress(3, 'names')
     fetchTranslationLimit()
   }, [])
+
+  // Validate existing names when nameOptions changes (on mount or when loaded from application data)
+  useEffect(() => {
+    const initialValidations: (NameValidation | null)[] = [null, null, null]
+    nameOptions.forEach((name, index) => {
+      if (name && name.trim()) {
+        initialValidations[index] = validateName(name)
+      }
+    })
+    setValidations(initialValidations)
+  }, [nameOptions.join(',')]) // Re-run when nameOptions content changes
   
   const fetchTranslationLimit = async () => {
     try {
@@ -236,8 +247,9 @@ export default function CompanyNamesPage({ params }: { params: { id: string } })
               <CardHeader>
                 <CardTitle>Company Name Options</CardTitle>
                 <CardDescription>
-                  Provide up to 3 company name options in order of preference. 
-                  We'll check availability and register the first approved name.
+                  Please provide 3 company name options in order of preference. 
+                  If your first choice isn't available, we'll use your second option, then your third option.
+                  We'll register the first approved name from your list.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -249,7 +261,9 @@ export default function CompanyNamesPage({ params }: { params: { id: string } })
                     <div className="flex items-center justify-between">
                       <Label htmlFor={`name-${index}`}>
                         Name Option {index + 1}
-                        {index === 0 && <Badge className="ml-2">Primary Choice</Badge>}
+                        {index === 0 && <Badge className="ml-2">1st Choice</Badge>}
+                        {index === 1 && <Badge variant="secondary" className="ml-2">2nd Choice</Badge>}
+                        {index === 2 && <Badge variant="outline" className="ml-2">3rd Choice</Badge>}
                       </Label>
                       {validations[index] && nameOptions[index] && (
                         <div>

@@ -15,7 +15,7 @@ ALTER TABLE workflow_steps ENABLE ROW LEVEL SECURITY;
 -- Users table - users can only see their own record
 CREATE POLICY "Users can view own profile" ON "public"."users"
 AS PERMISSIVE FOR SELECT TO authenticated 
-USING (auth.uid()::text = clerk_id);
+-- legacy clerk_id references; ensure policies use application user ids instead
 
 CREATE POLICY "Users can update own profile" ON "public"."users"
 AS PERMISSIVE FOR UPDATE TO authenticated 

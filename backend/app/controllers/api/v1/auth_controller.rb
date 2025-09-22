@@ -1,4 +1,8 @@
 class Api::V1::AuthController < ApplicationController
+  include JwtAuthenticatable
+
+  # Use Devise session authentication instead of JWT
+  skip_jwt_auth :me, :login, :sign_out
   skip_before_action :authenticate_user!, only: [:login]
   
   def me

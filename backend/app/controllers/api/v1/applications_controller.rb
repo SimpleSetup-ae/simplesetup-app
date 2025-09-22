@@ -1,5 +1,5 @@
 class Api::V1::ApplicationsController < Api::V1::BaseController
-  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress]
+  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
   before_action :set_company, except: [:create, :index, :admin_index]
   before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
   
@@ -59,7 +59,12 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   def update
     # Store data in auto_save_data for drafts
     if @company.update(application_params)
-      @company.auto_save_form_data!(params[:form_data], params[:step_name]) if params[:form_data]
+      # Convert form_data to a hash if it's ActionController::Parameters
+      form_data = params[:form_data]
+      if form_data.present?
+        form_data = form_data.to_unsafe_h if form_data.respond_to?(:to_unsafe_h)
+        @company.auto_save_form_data!(form_data, params[:step_name])
+      end
       
       render json: {
         success: true,
@@ -112,9 +117,15 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   
   # POST /api/v1/applications/:id/submit
   def submit
-    # Validate all required fields
-    validation_errors = validate_submission(@company)
+    # Transform auto-save data to database records before validation
+    transform_auto_save_data_to_records!(@company)
     
+    # Log current state for debugging
+    Rails.logger.info "After transform - gm_signatory_name: #{@company.gm_signatory_name}, ubo_terms_accepted: #{@company.ubo_terms_accepted}"
+    
+    # Validate all required fields
+    validation_errors = CompanySubmissionValidator.validate(@company)
+
     if validation_errors.any?
       render json: {
         success: false,
@@ -272,21 +283,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     )
   end
   
-  def validate_submission(company)
-    errors = []
-    
-    # Check required fields based on form steps
-    errors << "License validity required" if company.trade_license_validity.blank?
-    errors << "Business activities required" if company.activity_codes.blank?
-    errors << "Company name options required" if company.name_options.blank?
-    errors << "Share capital required" if company.share_capital.blank?
-    errors << "At least one shareholder required" if company.shareholders.empty?
-    errors << "At least one director required" if company.directors.empty?
-    errors << "GM signatory name required" if company.gm_signatory_name.blank?
-    errors << "Terms must be accepted" unless company.ubo_terms_accepted?
-    
-    errors
-  end
+  # validation logic moved to CompanySubmissionValidator
   
   def serialize_application(company)
     {
@@ -303,26 +300,97 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   end
   
   def serialize_full_application(company)
+    # Flatten auto_save_data to merge step-specific data
+    auto_save = company.auto_save_data || {}
+    merged_data = {}
+    
+    # Merge all step data into a flat structure
+    auto_save.each do |key, value|
+      if value.is_a?(Hash) && %w[activities members ubos names license shareholding].include?(key)
+        merged_data.merge!(value)
+      elsif !value.is_a?(Hash)
+        merged_data[key] = value
+      end
+    end
+    
+    # If auto_save_data has a top-level final_flush, use that data
+    if auto_save['final_flush'].is_a?(Hash)
+      merged_data = auto_save['final_flush']
+    elsif auto_save.any? && !auto_save.keys.any? { |k| %w[activities members ubos names license shareholding final_flush].include?(k) }
+      # If auto_save_data doesn't have step keys, it's probably already flat
+      merged_data = auto_save
+    end
+    
     serialize_application(company).merge(
-      form_data: company.auto_save_data.presence || company.form_data,
-      trade_license_validity: company.trade_license_validity,
-      visa_package: company.visa_package,
-      partner_visa_count: company.partner_visa_count,
-      share_capital: company.share_capital,
-      share_value: company.share_value,
-      name_options: company.name_options,
-      shareholders: company.shareholders.map { |s| serialize_person(s) },
-      directors: company.directors.map { |d| serialize_person(d) },
-      documents: company.documents.map { |d| serialize_document(d) }
+      form_data: merged_data,
+      # Include fields from both database and auto_save_data
+      trade_license_validity: company.trade_license_validity || merged_data['trade_license_validity'],
+      visa_package: company.visa_package || merged_data['visa_package'],
+      partner_visa_count: company.partner_visa_count || merged_data['partner_visa_count'],
+      share_capital: company.share_capital || merged_data['share_capital'],
+      share_value: company.share_value || merged_data['share_value'],
+      name_options: company.name_options.presence || merged_data['name_options'],
+      # Include data from auto_save that might not be in database yet
+      business_activities: merged_data['business_activities'],
+      main_activity_id: merged_data['main_activity_id'],
+      request_custom_activity: merged_data['request_custom_activity'],
+      custom_activity_description: merged_data['custom_activity_description'],
+      countries_of_operation: merged_data['countries_of_operation'],
+      operate_as_franchise: merged_data['operate_as_franchise'],
+      franchise_details: merged_data['franchise_details'],
+      accept_activity_rules: merged_data['accept_activity_rules'],
+      shareholding_type: merged_data['shareholding_type'],
+      total_shares: merged_data['total_shares'],
+      voting_rights_proportional: merged_data['voting_rights_proportional'],
+      voting_rights_notes: merged_data['voting_rights_notes'],
+      general_manager: merged_data['general_manager'],
+      gm_signatory_name: company.gm_signatory_name || merged_data['gm_signatory_name'],
+      gm_signatory_email: merged_data['gm_signatory_email'],
+      ubo_terms_accepted: company.ubo_terms_accepted || merged_data['ubo_terms_accepted'],
+      # Include database records
+      shareholders: company.shareholders.any? ? company.shareholders.map { |s| serialize_person(s) } : merged_data['shareholders'],
+      directors: company.directors.any? ? company.directors.map { |d| serialize_person(d) } : merged_data['directors'],
+      documents: DocumentSerializer.collection(company.documents)
     )
   end
   
   def serialize_admin_application(company)
-    serialize_application(company).merge(
-      owner: company.owner ? { id: company.owner.id, email: company.owner.email } : nil,
-      document_count: company.documents.count,
-      last_activity: company.application_progress&.last_activity_at
-    )
+    # Get the first choice company name from name_options or fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
+    {
+      id: company.id,
+      companyName: first_choice_name,
+      freeZone: company.free_zone,
+      status: company.status,
+      submittedAt: (company.submitted_at || company.created_at)&.iso8601,
+      userEmail: company.owner&.email,
+      userFullName: company.owner&.full_name,
+      isAnonymous: company.anonymous_draft?,
+      packageType: determine_package_type(company),
+      estimatedAnnualTurnover: company.estimated_annual_turnover,
+      completionPercentage: company.application_progress&.percent || 0,
+      progress: company.application_progress&.percent || 0,
+      documentCount: company.documents.count,
+      lastActivity: company.application_progress&.last_activity_at&.iso8601,
+      createdAt: company.created_at.iso8601,
+      updatedAt: company.updated_at.iso8601
+    }
+  end
+  
+  def determine_package_type(company)
+    # Determine package type based on visa count and license validity
+    visa_count = company.visa_package || 0
+    license_years = company.trade_license_validity || 1
+    
+    case [license_years.to_i, visa_count.to_i]
+    when [1, 0], [1, 1]
+      'Basic'
+    when [1, 2], [1, 3], [2, 0], [2, 1]
+      'Standard'
+    else
+      'Premium'
+    end
   end
   
   def serialize_full_admin_application(company)
@@ -330,42 +398,226 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       owner: company.owner ? UserSerializer.new(company.owner).as_json : nil,
       license_number: company.license_number,
       license_status: company.license_status,
-      all_documents: company.documents.map { |d| serialize_document_admin(d) },
+      all_documents: company.documents.map { |d| DocumentSerializer.serialize(d, include_urls: true, admin: true) },
       activity_details: company.activity_codes.map { |code| 
-        activity = BusinessActivity.find_by(activity_code: code)
-        activity ? BusinessActivitySerializer.new(activity).as_json : { code: code }
+        activity = BusinessActivity.find_by(id: code) || BusinessActivity.find_by(activity_code: code)
+        if activity
+          {
+            id: activity.id,
+            code: activity.activity_code,
+            name: activity.activity_name,
+            description: activity.activity_description,
+            activity_type: activity.activity_type,
+            regulation_type: activity.regulation_type
+          }
+        else
+          { 
+            id: code,
+            code: code, 
+            name: 'Activity Name Not Available',
+            description: 'No description available'
+          }
+        end
       }
     )
   end
   
   def serialize_person(person)
+    # Extract data from metadata if available (passport extraction data is stored here)
+    metadata = person.metadata || {}
+    
+    # Find passport document for this person
+    passport_doc = person.company.documents.find { |d| d.document_type == 'passport' && d.person_id == person.id }
+    passport_url = nil
+    
+    if passport_doc
+      begin
+        passport_url = SupabaseStorageService.get_signed_url(passport_doc.storage_path, expires_in: 3600)
+      rescue => e
+        Rails.logger.warn "Failed to get passport URL for person #{person.id}: #{e.message}"
+      end
+    end
+    
     {
       id: person.id,
       type: person.type,
       first_name: person.first_name,
+      middle_name: metadata['middle_name'],
       last_name: person.last_name,
+      gender: metadata['gender'],
+      date_of_birth: metadata['date_of_birth'],
       nationality: person.nationality,
       passport_number: person.passport_number,
-      share_percentage: person.share_percentage
+      passport_issue_date: metadata['passport_issue_date'],
+      passport_expiry_date: metadata['passport_expiry_date'],
+      passport_issue_country: metadata['passport_issue_country'],
+      passport_issue_place: metadata['passport_issue_place'],
+      share_percentage: person.share_percentage,
+      passport_file_url: passport_url,
+      email: metadata['email'],
+      phone: metadata['phone'],
+      address: metadata['address']
     }
   end
-  
-  def serialize_document(document)
-    {
-      id: document.id,
-      name: document.name,
-      document_type: document.document_type,
-      uploaded_at: document.uploaded_at,
-      file_size: document.file_size
-    }
+
+  # Transform auto-save data into actual database records and fields
+  def transform_auto_save_data_to_records!(company)
+    auto_save = company.auto_save_data || {}
+    
+    # Flatten nested step data - frontend saves under step names like 'activities', 'members', etc.
+    merged_data = {}
+    auto_save.each do |key, value|
+      if value.is_a?(Hash) && %w[activities members ubos names license shareholding].include?(key)
+        # If it's a known step name with nested data, merge it
+        merged_data.merge!(value)
+      elsif !value.is_a?(Hash)
+        # If it's already a top-level field, keep it
+        merged_data[key] = value
+      end
+    end
+    
+    # Also check for fields that might be at the top level
+    # (in case they were saved directly without a step name)
+    %w[gm_signatory_name gm_signatory_email ubo_terms_accepted].each do |field|
+      if auto_save[field].present? && !merged_data.key?(field)
+        merged_data[field] = auto_save[field]
+      end
+    end
+    
+    # Wrap all transformations in a transaction for atomicity
+    ActiveRecord::Base.transaction do
+      # Transform business activities to activity_codes
+      if merged_data['business_activities'].present? && merged_data['business_activities'].is_a?(Array)
+        activity_codes = merged_data['business_activities'].map { |activity| 
+          next unless activity.is_a?(Hash)
+          activity['activity_id'] || activity['activity_code'] 
+        }.compact.uniq
+        company.activity_codes = activity_codes if activity_codes.any?
+      end
+      
+      # Transform shareholders to Person records
+      if merged_data['shareholders'].present? && merged_data['shareholders'].is_a?(Array)
+        # Store existing shareholders before destroying
+        existing_shareholders = company.shareholders.to_a
+        
+        begin
+          # Clear existing shareholders
+          company.shareholders.destroy_all
+          
+          merged_data['shareholders'].each do |shareholder_data|
+            next unless shareholder_data.is_a?(Hash)
+            
+            # Handle both individual and corporate shareholders
+            if shareholder_data['type'] == 'Corporate'
+              company.people.create!(
+                type: 'shareholder',
+                first_name: shareholder_data['company_name'] || 'Corporate Entity',
+                last_name: '',
+                nationality: shareholder_data['jurisdiction'] || shareholder_data['nationality'],
+                share_percentage: shareholder_data['share_percentage'] || 0,
+                metadata: shareholder_data
+              )
+            else
+              company.people.create!(
+                type: 'shareholder',
+                first_name: shareholder_data['first_name'] || '',
+                last_name: shareholder_data['last_name'] || '',
+                nationality: shareholder_data['nationality'],
+                passport_number: shareholder_data['passport_number'],
+                share_percentage: shareholder_data['share_percentage'] || 0,
+                contact_info: {
+                  email: shareholder_data['email'],
+                  phone: shareholder_data['phone']
+                }.compact,
+                metadata: shareholder_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'share_percentage', 'email', 'phone')
+              )
+            end
+          end
+        rescue => e
+          Rails.logger.error "Failed to create shareholders: #{e.message}"
+          # Don't leave company without shareholders if creation fails
+          raise ActiveRecord::Rollback
+        end
+      end
+      
+      # Transform directors to Person records (General Manager becomes director)
+      if merged_data['general_manager'].present? && merged_data['general_manager'].is_a?(Hash)
+        gm_data = merged_data['general_manager']
+        
+        begin
+          # Clear existing directors
+          company.directors.destroy_all
+          
+          company.people.create!(
+            type: 'director',
+            first_name: gm_data['first_name'] || '',
+            last_name: gm_data['last_name'] || '',
+            nationality: gm_data['nationality'],
+            passport_number: gm_data['passport_number'],
+            appointment_type: 'general_manager',
+            contact_info: {
+              email: gm_data['email'],
+              phone: gm_data['phone']
+            }.compact,
+            metadata: gm_data.except('first_name', 'last_name', 'nationality', 'passport_number', 'email', 'phone')
+          )
+        rescue => e
+          Rails.logger.error "Failed to create director: #{e.message}"
+          raise ActiveRecord::Rollback
+        end
+      end
+      
+      # Collect all updates to apply at once
+      update_params = {}
+      
+      # Transform name options
+      if merged_data['name_options'].present? && merged_data['name_options'].is_a?(Array)
+        update_params[:name_options] = merged_data['name_options'].select { |n| n.is_a?(String) && n.present? }
+      end
+      
+      # Transform GM signatory name
+      # Check both gm_signatory_name field and extract from general_manager object
+      if merged_data['gm_signatory_name'].present?
+        update_params[:gm_signatory_name] = merged_data['gm_signatory_name']
+      elsif merged_data['general_manager'].present? && merged_data['general_manager'].is_a?(Hash)
+        # If no explicit gm_signatory_name but we have a general_manager, use their name
+        gm = merged_data['general_manager']
+        full_name = "#{gm['first_name']} #{gm['last_name']}".strip
+        update_params[:gm_signatory_name] = full_name if full_name.present?
+      end
+      
+      # Transform UBO terms acceptance
+      # Only set if explicitly true/false, not nil
+      if merged_data['ubo_terms_accepted'] == true || merged_data['ubo_terms_accepted'] == false
+        update_params[:ubo_terms_accepted] = merged_data['ubo_terms_accepted']
+      elsif merged_data['accept_activity_rules'] == true
+        # If activity rules were accepted but UBO terms not explicitly set, 
+        # assume they were accepted (for backward compatibility)
+        update_params[:ubo_terms_accepted] = true
+      end
+      
+      # Add direct application params
+      update_params[:trade_license_validity] = merged_data['trade_license_validity'] if merged_data['trade_license_validity'].present?
+      update_params[:visa_package] = merged_data['visa_package'] if merged_data.key?('visa_package')
+      update_params[:share_capital] = merged_data['share_capital'] if merged_data['share_capital'].present?
+      update_params[:share_value] = merged_data['share_value'] if merged_data['share_value'].present?
+      update_params[:shareholding_type] = merged_data['shareholding_type'] if merged_data['shareholding_type'].present?
+      
+      # Apply all updates at once
+      Rails.logger.info "Updating company with params: #{update_params.inspect}"
+      company.update!(update_params) if update_params.any?
+    end
+    
+    # Reload associations to reflect changes
+    company.reload
+    Rails.logger.info "After reload - gm_signatory_name: #{company.gm_signatory_name}, ubo_terms_accepted: #{company.ubo_terms_accepted}"
+  rescue => e
+    Rails.logger.error "Transform failed: #{e.message}"
+    # Re-raise to let controller handle it
+    raise
   end
   
-  def serialize_document_admin(document)
-    serialize_document(document).merge(
-      storage_path: document.storage_path,
-      verified: document.verified,
-      ocr_status: document.ocr_status,
-      extracted_data: document.extracted_data
-    )
-  end
+  # document serialization handled by DocumentSerializer
+  
+  # admin document serialization handled by DocumentSerializer
 end

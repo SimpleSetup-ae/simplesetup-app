@@ -156,7 +156,7 @@ class Api::V1::DocumentsController < Api::V1::BaseController
     
     render json: {
       success: true,
-      documents: documents.map { |d| serialize_document(d) }
+      documents: DocumentSerializer.collection(documents, include_urls: false)
     }
   end
   
@@ -164,8 +164,7 @@ class Api::V1::DocumentsController < Api::V1::BaseController
   def show
     render json: {
       success: true,
-      document: serialize_document(@document),
-      download_url: SupabaseStorageService.get_signed_url(@document.storage_path, expires_in: 3600)
+      document: DocumentSerializer.serialize(@document, include_urls: true)
     }
   end
   
@@ -206,19 +205,5 @@ class Api::V1::DocumentsController < Api::V1::BaseController
     "companies/#{company.id}/#{category}/#{timestamp}_#{safe_filename}"
   end
   
-  def serialize_document(document)
-    {
-      id: document.id,
-      name: document.name,
-      document_type: document.document_type,
-      document_category: document.document_category,
-      file_name: document.file_name,
-      file_size: document.file_size,
-      content_type: document.content_type,
-      uploaded_at: document.uploaded_at,
-      ocr_status: document.ocr_status,
-      verified: document.verified,
-      extracted_data: document.extracted_data
-    }
-  end
+  # serialization handled by DocumentSerializer
 end

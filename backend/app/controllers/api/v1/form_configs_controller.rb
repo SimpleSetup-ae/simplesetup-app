@@ -46,9 +46,24 @@ class Api::V1::FormConfigsController < Api::V1::BaseController
     freezone_code = params[:freezone]&.upcase
     validation_type = params[:type]
     data = params[:data] || {}
-    
+
+    # Validate basic parameters
+    validation_errors = FormConfigValidator.validate(
+      freezone_code: freezone_code,
+      validation_type: validation_type,
+      data: data
+    )
+
+    if validation_errors.any?
+      render json: {
+        success: false,
+        error: validation_errors.first
+      }, status: :bad_request
+      return
+    end
+
     config_service = CompanyFormation::ConfigService.new(freezone_code)
-    
+
     unless config_service.valid?
       render json: { error: 'Invalid freezone configuration' }, status: :bad_request
       return
@@ -99,6 +114,23 @@ class Api::V1::FormConfigsController < Api::V1::BaseController
   private
   
   def validate_params
-    # Add any parameter validation here
+    # Use FormConfigValidator for parameter validation
+    freezone_code = params[:freezone]&.upcase
+    validation_type = params[:type]
+
+    validation_errors = FormConfigValidator.validate(
+      freezone_code: freezone_code,
+      validation_type: validation_type
+    )
+
+    if validation_errors.any?
+      render json: {
+        success: false,
+        error: validation_errors.first
+      }, status: :bad_request
+      return false
+    end
+
+    true
   end
 end

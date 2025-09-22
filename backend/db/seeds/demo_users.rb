@@ -39,9 +39,13 @@ admin_user = User.find_or_create_by(email: 'admin@simplesetup.ae') do |user|
   user.password_confirmation = 'admin123456'
   user.first_name = 'Sarah'
   user.last_name = 'Administrator'
+  user.is_admin = true
   user.confirmed_at = Time.current
   puts "   ✅ Created admin user: #{user.email}"
 end
+
+# Ensure admin flag is set for existing admin user
+admin_user.update!(is_admin: true) unless admin_user.is_admin?
 
 # Demo Support User
 support_user = User.find_or_create_by(email: 'support@simplesetup.ae') do |user|

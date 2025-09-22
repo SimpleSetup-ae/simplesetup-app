@@ -4,19 +4,22 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/a
 export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`
   
-  const defaultHeaders = {
+  let defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers || {}),
   }
 
   // Remove Content-Type for FormData
   if (options.body instanceof FormData) {
-    delete defaultHeaders['Content-Type']
+    const headerObj = { ...defaultHeaders } as Record<string, string>
+    delete headerObj['Content-Type']
+    defaultHeaders = headerObj
   }
 
   const response = await fetch(url, {
     ...options,
     headers: defaultHeaders,
+    credentials: 'include', // Include cookies for session authentication
   })
 
   return response
@@ -50,23 +53,62 @@ export interface DashboardData {
   companies: Array<{
     id: string
     name: string
-    status: 'draft' | 'pending' | 'approved' | 'rejected'
+    trade_name?: string
+    free_zone?: string
+    status: 'draft' | 'in_progress' | 'pending_payment' | 'processing' | 'approved' | 'issued' | 'rejected'
+    license_number?: string
+    license_status?: string
+    formation_progress?: number
+    license_type?: string
+    license_expiry_date?: string
+    license_renewal_days?: number
+    establishment_card_number?: string
+    establishment_card_expiry_date?: string
+    official_email?: string
+    phone?: string
+    website?: string
+    shareholders?: Array<{
+      id: string
+      full_name: string
+      identification_type: string
+      identification_number: string
+      passport_number?: string
+      passport_expiry_date?: string
+      share_percentage: number
+      type: string
+    }>
+    directors?: Array<{
+      id: string
+      full_name: string
+      identification_type: string
+      identification_number: string
+      passport_number?: string
+      passport_expiry_date?: string
+      type: string
+    }>
+    documents?: {
+      trade_license?: any
+      moa?: any
+      certificate_of_incorporation?: any
+      commercial_license?: any
+    }
     created_at: string
     updated_at: string
-    formation_type: string
-    business_activities: Array<{
-      id: string
-      name: string
-      code: string
-    }>
   }>
-  user: {
+  notifications?: Array<{
     id: string
-    email: string
-    name?: string
-    admin: boolean
-    translation_limit: number
-    translations_used: number
+    type: string
+    title: string
+    message: string
+    urgency: 'low' | 'medium' | 'high' | 'critical'
+    created_at: string
+    read: boolean
+  }>
+  stats: {
+    total_companies: number
+    in_progress: number
+    completed: number
+    documents_pending: number
   }
 }
 
@@ -78,5 +120,11 @@ export const fetchDashboardData = async (): Promise<DashboardData> => {
     throw new Error('Failed to fetch dashboard data')
   }
   
-  return response.json()
+  const result = await response.json()
+  
+  if (!result.success) {
+    throw new Error(result.message || 'Failed to fetch dashboard data')
+  }
+  
+  return result.data
 }

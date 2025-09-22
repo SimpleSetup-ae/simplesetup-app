@@ -113,6 +113,43 @@ secrets/
 automations/screenshots/
 automations/logs/
 
+# Playwright MCP screenshots and traces
+.playwright-mcp/
+
+# Screenshots and generated images (avoid bloating PRs)
+**/screenshots/
+**/*.screenshot.png
+**/*.screenshot.jpg
+**/*.screenshot.jpeg
+**/*-screenshot.png
+**/*-screenshot.jpg
+**/*-screenshot.jpeg
+
+# Test images and temporary files
+test*.png
+test*.jpg
+test*.jpeg
+test*.gif
+temp*.png
+temp*.jpg
+temp*.jpeg
+
+# Generated reports and traces
+**/traces/
+**/test-results/
+**/playwright-report/
+**/coverage-report/
+
+# Automation artifacts
+**/artifacts/
+**/output/
+**/results/
+**/logs/
+
+# Browser automation files
+**/browser-downloads/
+**/browser-uploads/
+
 # Docker
 .dockerignore
 

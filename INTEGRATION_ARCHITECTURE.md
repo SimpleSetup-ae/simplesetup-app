@@ -143,7 +143,7 @@ end
 ### 1. Leverage Existing Infrastructure
 - **YAML Parser**: Already proven and tested
 - **Business Activities API**: Ready to use
-- **Authentication**: Clerk integration exists
+ - **Authentication**: Devise-backed API sessions
 - **File Upload**: Document service already implemented
 
 ### 2. Maintain Backward Compatibility

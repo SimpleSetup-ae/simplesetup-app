@@ -122,7 +122,10 @@ class Company < ApplicationRecord
   def auto_save_form_data!(step_data, step_name = nil)
     current_auto_save = auto_save_form_data.deep_dup
     
-    if step_name
+    if step_name == 'final_flush'
+      # For final flush, merge all data at top level to ensure it's accessible
+      current_auto_save.merge!(step_data)
+    elsif step_name
       current_auto_save[step_name] = step_data
     else
       current_auto_save.merge!(step_data)
@@ -135,12 +138,12 @@ class Company < ApplicationRecord
   end
 
   def merge_auto_save_to_form_data!
+    # This is now handled by transform_auto_save_data_to_records!
+    # We just clear the auto_save_data after submission
     return if auto_save_data.blank?
     
-    merged_data = form_data.deep_merge(auto_save_data)
     update!(
-      formation_data: merged_data,
-      formation_step: determine_current_step(merged_data),
+      formation_step: determine_current_step(auto_save_data),
       auto_save_data: {},
       last_auto_save_at: nil
     )

@@ -363,6 +363,7 @@ DEPENDENCIES
   faker
   faraday
   jbuilder
+  jwt
   kaminari
   mini_magick
   omniauth

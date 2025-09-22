@@ -32,7 +32,8 @@ export function useFormConfig({ freezone }: UseFormConfigOptions): FormConfigHoo
       
       // Try real API first, fallback to mock for testing
       try {
-        const response = await fetch(`/api/v1/form_configs/${freezone}`);
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
+        const response = await fetch(`${API_BASE_URL}/form_configs/${freezone}`);
         const result = await response.json();
         
         if (response.ok && result.data) {
@@ -58,7 +59,8 @@ export function useFormConfig({ freezone }: UseFormConfigOptions): FormConfigHoo
   // Validation methods (with mock fallback for testing)
   const validateCompanyName = useCallback(async (name: string): Promise<ValidationResult> => {
     try {
-      const response = await fetch(`/api/v1/form_configs/${freezone}/validate`, {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
+      const response = await fetch(`${API_BASE_URL}/form_configs/${freezone}/validate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

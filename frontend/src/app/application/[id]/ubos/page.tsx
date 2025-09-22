@@ -57,11 +57,12 @@ export default function UBOsPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     updateProgress(6, 'ubos')
     
-    // Check if there are any corporate shareholders
-    const hasCorporateShareholders = applicationData.shareholders?.some((s: any) => s.type === 'Corporate')
+    // Check if UBOs are required based on shareholding type
+    const shareholdingType = applicationData.shareholding_type
+    const requiresUBO = shareholdingType === 'corporate' || shareholdingType === 'mixed'
     
-    // If no corporate shareholders, redirect to review page
-    if (!hasCorporateShareholders) {
+    // If UBOs are not required, redirect to review page
+    if (!requiresUBO) {
       router.push(`/application/${params.id}/review`)
       return
     }
@@ -142,11 +143,12 @@ export default function UBOsPage({ params }: { params: { id: string } }) {
   const validateAndContinue = async () => {
     const validationErrors = []
     
-    // Check if UBOs are required (any corporate shareholder >= 25%)
-    const requiresUBO = applicationData.shareholders?.some((s: any) => s.type === 'Corporate' && s.share_percentage >= 25)
+    // Check if UBOs are required based on shareholding type
+    const shareholdingType = applicationData.shareholding_type
+    const requiresUBO = shareholdingType === 'corporate' || shareholdingType === 'mixed'
     
     if (requiresUBO && ubos.length === 0) {
-      validationErrors.push('Ultimate Beneficial Owners declaration is required for corporate shareholders with 25% or more')
+      validationErrors.push('Ultimate Beneficial Owners declaration is required for corporate or mixed shareholding types')
     }
     
     // Validate each UBO

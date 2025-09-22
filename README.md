@@ -43,7 +43,7 @@ This will start all services:
 - **Next.js 14** with App Router
 - **shadcn/ui** components
 - **Tailwind CSS** with custom gradients
-- **Clerk** authentication
+ - **Devise-backed authentication**
 - **TanStack Query** for data fetching
 - **Zod** for validation
 
@@ -52,12 +52,12 @@ This will start all services:
 - **Supabase** PostgreSQL database
 - **Sidekiq** background jobs
 - **Redis** caching and queues
-- **Clerk** JWT verification
+ - **Devise** authentication
 
 ### Mobile
 - **Expo** React Native
 - **TypeScript**
-- **Clerk** authentication
+ - **Devise-backed API authentication**
 - **React Query**
 
 ### Automations
@@ -70,7 +70,7 @@ This will start all services:
 
 ### Phase 1 (MVP)
 - [x] Monorepo structure
-- [ ] Clerk authentication
+ - [x] Devise authentication
 - [ ] Company formation workflow
 - [ ] Document upload with OCR
 - [ ] YAML-driven workflow engine
@@ -105,7 +105,7 @@ This will start all services:
 ### Environment Variables
 Copy `env.template` to `.env` and configure:
 - Supabase credentials
-- Clerk authentication keys
+ - Devise secret key and mailer keys
 - AI service API keys
 - Stripe keys (Phase 2)
 
