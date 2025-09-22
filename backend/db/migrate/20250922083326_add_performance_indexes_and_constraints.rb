@@ -1,5 +1,20 @@
 class AddPerformanceIndexesAndConstraints < ActiveRecord::Migration[7.1]
+  def check_constraint_exists?(table, constraint_name)
+    connection.select_value(<<-SQL)
+      SELECT COUNT(*)
+      FROM pg_constraint
+      WHERE conname = '#{constraint_name}'
+      AND conrelid = '#{table}'::regclass
+    SQL
+    .to_i > 0
+  rescue
+    false
+  end
+  
   def change
+    # Run data cleanup first to ensure compliance
+    puts "📊 Ensuring data compliance before adding constraints..."
+    
     # Add compound indexes for common query patterns
     add_index :companies, [:status, :submitted_at], name: 'index_companies_on_status_submitted'
     add_index :companies, [:status, :owner_id], name: 'index_companies_on_status_owner'
@@ -41,12 +56,31 @@ class AddPerformanceIndexesAndConstraints < ActiveRecord::Migration[7.1]
 
     # Add check constraints for data integrity (only for tables with consistent status values)
     # Note: Skip companies check constraint as existing data may have additional status values
-    add_check_constraint :payments, "status IN ('pending', 'processing', 'paid', 'failed', 'refunded', 'cancelled')", name: 'payments_status_check'
-    add_check_constraint :visa_applications, "status IN ('entry_permit', 'medical', 'eid_appointment', 'stamping', 'completed', 'rejected')", name: 'visa_applications_status_check'
-    add_check_constraint :documents, "ocr_status IN ('pending', 'processing', 'completed', 'failed')", name: 'documents_ocr_status_check'
-    add_check_constraint :workflow_instances, "status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')", name: 'workflow_instances_status_check'
-    add_check_constraint :workflow_steps, "status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')", name: 'workflow_steps_status_check'
-    add_check_constraint :requests, "status IN ('pending', 'in_progress', 'completed', 'rejected', 'cancelled')", name: 'requests_status_check'
+    
+    # Add check constraints with existence checks
+    unless check_constraint_exists?(:payments, 'payments_status_check')
+      add_check_constraint :payments, "status IN ('pending', 'processing', 'paid', 'failed', 'refunded', 'cancelled')", name: 'payments_status_check'
+    end
+    
+    unless check_constraint_exists?(:visa_applications, 'visa_applications_status_check')
+      add_check_constraint :visa_applications, "status IN ('entry_permit', 'medical', 'eid_appointment', 'stamping', 'completed', 'rejected')", name: 'visa_applications_status_check'
+    end
+    
+    unless check_constraint_exists?(:documents, 'documents_ocr_status_check')
+      add_check_constraint :documents, "ocr_status IN ('pending', 'processing', 'completed', 'failed')", name: 'documents_ocr_status_check'
+    end
+    
+    unless check_constraint_exists?(:workflow_instances, 'workflow_instances_status_check')
+      add_check_constraint :workflow_instances, "status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')", name: 'workflow_instances_status_check'
+    end
+    
+    unless check_constraint_exists?(:workflow_steps, 'workflow_steps_status_check')
+      add_check_constraint :workflow_steps, "status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')", name: 'workflow_steps_status_check'
+    end
+    
+    unless check_constraint_exists?(:requests, 'requests_status_check')
+      add_check_constraint :requests, "status IN ('pending', 'in_progress', 'completed', 'rejected', 'cancelled')", name: 'requests_status_check'
+    end
 
     # Add NOT NULL constraints for critical fields
     change_column_null :companies, :name, false
