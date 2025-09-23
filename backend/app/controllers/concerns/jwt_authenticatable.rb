@@ -34,26 +34,28 @@ module JwtAuthenticatable
     # Check if user account is locked
     return render_unauthorized('Account locked') if user.locked_at.present?
 
-    # Set current user
-    @current_user = user
+    # Prefer Devise's warden session if available, otherwise set request-scoped user
+    begin
+      sign_in(:user, user, store: false) if respond_to?(:sign_in)
+    rescue StandardError
+      # Fallback to request-scoped assignment when warden is not available here
+      @jwt_current_user = user
+    else
+      @jwt_current_user = user
+    end
   end
 
+  # Do NOT override Devise helpers. Prefer Devise's current_user if present.
   def current_user
-    @current_user
+    devise_user = (super() if defined?(super))
+    return devise_user if devise_user.present?
+    @jwt_current_user
   end
 
   def user_signed_in?
+    # Use Devise's implementation when available
+    return super() if defined?(super)
     current_user.present?
-  end
-
-  def authenticate_user!
-    return if user_signed_in?
-
-    render json: {
-      success: false,
-      error: 'Authentication required',
-      request_id: request_id
-    }, status: :unauthorized
   end
 
   def skip_jwt_auth?
@@ -75,7 +77,7 @@ module JwtAuthenticatable
     render json: {
       success: false,
       error: message,
-      request_id: request_id
+      request_id: request.request_id || SecureRandom.uuid
     }, status: :unauthorized
   end
 
