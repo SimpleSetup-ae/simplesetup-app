@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApplication } from '@/contexts/ApplicationContext'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { FormSection } from '@/components/application/FormSection'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowRight, CheckCircle, Shield, Clock, DollarSign } from 'lucide-react'
@@ -28,7 +28,7 @@ export default function StartPage({ params }: { params: { id: string } }) {
     <div className="min-h-screen brand-gradient-background py-12">
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="font-lora text-4xl md:text-5xl font-bold mb-4">
             <span className="brand-gradient-text">Start Your UAE Company Formation</span>
           </h1>
           <p className="text-xl text-gray-700">
@@ -36,41 +36,38 @@ export default function StartPage({ params }: { params: { id: string } }) {
           </p>
         </div>
         
-        <Card className="shadow-xl">
-          <CardHeader className="text-center pb-2">
-            <CardTitle className="text-2xl">Welcome to SimpleSetup</CardTitle>
-            <CardDescription className="text-lg mt-2">
-              The fastest way to establish your business in the UAE
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-6">
+        <FormSection
+          title="Welcome to SimpleSetup"
+          description="The fastest way to establish your business in the UAE"
+          className="shadow-xl"
+        >
             {/* Benefits */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="flex items-start space-x-3">
                 <CheckCircle className="h-6 w-6 text-success-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">100% Online Process</h3>
+                  <h3 className="font-lora text-lg font-medium text-gray-900">100% Online Process</h3>
                   <p className="text-sm text-gray-600">No need to visit offices</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Shield className="h-6 w-6 text-brand-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Secure & Confidential</h3>
+                  <h3 className="font-lora text-lg font-medium text-gray-900">Secure & Confidential</h3>
                   <p className="text-sm text-gray-600">Your data is protected</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Clock className="h-6 w-6 text-brand-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Auto-Save Progress</h3>
+                  <h3 className="font-lora text-lg font-medium text-gray-900">Auto-Save Progress</h3>
                   <p className="text-sm text-gray-600">Never lose your work</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <DollarSign className="h-6 w-6 text-brand-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Live Pricing</h3>
+                  <h3 className="font-lora text-lg font-medium text-gray-900">Live Pricing</h3>
                   <p className="text-sm text-gray-600">See costs update in real-time</p>
                 </div>
               </div>
@@ -78,7 +75,7 @@ export default function StartPage({ params }: { params: { id: string } }) {
             
             {/* Process Overview */}
             <div className="border-t pt-6">
-              <h3 className="font-semibold mb-4">What You'll Need:</h3>
+              <h3 className="font-lora text-xl font-medium mb-4 text-gray-900">What You'll Need:</h3>
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <span className="w-8 h-8 brand-step-number rounded-full flex items-center justify-center text-lg font-bold">1</span>
@@ -126,8 +123,7 @@ export default function StartPage({ params }: { params: { id: string } }) {
                 Your progress is automatically saved • No credit card required to start
               </p>
             </div>
-          </CardContent>
-        </Card>
+        </FormSection>
         
         {/* Trust Indicators */}
         <div className="text-center mt-8 text-sm text-gray-600">

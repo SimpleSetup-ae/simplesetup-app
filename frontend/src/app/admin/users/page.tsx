@@ -160,7 +160,7 @@ export default function AdminUsersPage() {
       console.error('Error creating user:', error)
       toast({
         title: "Error",
-        description: error.message || "Failed to create user. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create user. Please try again.",
         variant: "destructive",
       })
     }
@@ -192,7 +192,7 @@ export default function AdminUsersPage() {
       console.error('Error updating user:', error)
       toast({
         title: "Error",
-        description: error.message || "Failed to update user. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update user. Please try again.",
         variant: "destructive",
       })
     }
@@ -224,7 +224,7 @@ export default function AdminUsersPage() {
       console.error('Error updating user:', error)
       toast({
         title: "Error",
-        description: error.message || "Failed to update user. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update user. Please try again.",
         variant: "destructive",
       })
     }

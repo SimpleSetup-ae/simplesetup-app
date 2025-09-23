@@ -4,7 +4,7 @@ import React from "react"
 
 export function Logo() {
   return (
-    <span className="text-xl font-bold text-orange-500">
+    <span className="font-lora text-xl font-bold text-orange-500">
       SimpleSetup.ae
     </span>
   )

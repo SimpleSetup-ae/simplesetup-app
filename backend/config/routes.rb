@@ -146,6 +146,7 @@ Rails.application.routes.draw do
           get :filters
         end
       end
+      resources :countries, only: [:index]
       
       # Form Configurations
       resources :form_configs, param: :freezone, only: [:show] do
