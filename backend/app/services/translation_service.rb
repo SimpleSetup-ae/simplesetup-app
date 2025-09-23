@@ -70,7 +70,7 @@ class TranslationService
         PROMPT
         
         request.body = {
-          model: 'gpt-5',
+          model: 'gpt-4o',
           messages: [
             {
               role: 'system',
@@ -81,7 +81,8 @@ class TranslationService
               content: prompt
             }
           ],
-          max_completion_tokens: 100
+          max_tokens: 50,
+          temperature: 0.1
         }.to_json
         
         response = http.request(request)

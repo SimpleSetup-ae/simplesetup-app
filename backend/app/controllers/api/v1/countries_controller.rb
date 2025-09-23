@@ -7,41 +7,45 @@ class Api::V1::CountriesController < Api::V1::BaseController
   # Params:
   #   q: search string (optional)
   #   include_continents: boolean (default true)
+  #   limit: integer (default 20)
   def index
     query = (params[:q] || '').to_s.strip.downcase
     include_continents = params[:include_continents].to_s != 'false'
+    limit = (params[:limit] || 20).to_i.clamp(1, 100)
 
-    countries = ISO3166::Country.all.select(&:translations)
+    countries = ISO3166::Country.all
 
     results = countries.map do |c|
+      name = c.translations['en'] || c.name
       {
         code: c.alpha2,
-        name: c.translations['en'] || c.name,
-        continent: c.continent&.titleize,
+        name: name,
+        continent: c.continent,
         region: c.region,
       }
     end
 
     if query.present?
-      q = Regexp.escape(query)
       results = results.select do |r|
-        r[:name].downcase.match?(/\b#{q}/) ||
-          r[:code].downcase == query ||
+        r[:name].to_s.downcase.start_with?(query) ||
+          r[:code].to_s.downcase == query ||
           (include_continents && r[:continent].to_s.downcase.start_with?(query))
       end
     end
 
-    # Add continent suggestions if requested and query matches
     continents = []
     if include_continents
-      continents = ISO3166::Country::CONTINENTS.values.map { |name| name.titleize }
+      continents = countries.map(&:continent).compact.uniq
       if query.present?
-        continents = continents.select { |c| c.downcase.start_with?(query) }
+        continents = continents.select { |c| c.to_s.downcase.start_with?(query) }
       end
       continents = continents.map { |c| { code: nil, name: c, continent: c } }
     end
 
-    render json: { success: true, data: (results + continents).uniq { |r| [r[:code], r[:name]] }.first(20) }
+    data = (results + continents).uniq { |r| [r[:code], r[:name]] }
+    data = data.sort_by { |r| [r[:code].nil? ? 1 : 0, r[:name].to_s] }.first(limit)
+
+    render json: { success: true, data: data }
   end
 end
 

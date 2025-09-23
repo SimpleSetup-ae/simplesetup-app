@@ -1,5 +1,6 @@
 class Api::V1::TranslationsController < Api::V1::BaseController
   skip_before_action :authenticate_user!
+  skip_jwt_auth :arabic, :limit
   before_action :check_translation_limit
   
   # POST /api/v1/translations/arabic

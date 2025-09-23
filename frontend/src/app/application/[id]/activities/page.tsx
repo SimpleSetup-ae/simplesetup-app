@@ -56,6 +56,9 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
   const [acceptRules, setAcceptRules] = useState(applicationData.accept_activity_rules || false)
   const [errors, setErrors] = useState<string[]>([])
   const [countries, setCountries] = useState<string[]>(applicationData.countries_of_operation || ['United Arab Emirates'])
+  const [countryQuery, setCountryQuery] = useState('')
+  const [countrySuggestions, setCountrySuggestions] = useState<Array<{ code: string | null; name: string; continent?: string }>>([])
+  const [loadingCountries, setLoadingCountries] = useState(false)
  
   // Auto-save whenever selection or related fields change
   useEffect(() => {
@@ -70,6 +73,40 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
     }, 'activities')
   }, [selectedActivities, mainActivityId, requestCustom, customDescription, acceptRules, countries])
   
+  // Load country suggestions with debounce
+  useEffect(() => {
+    const q = countryQuery.trim()
+    if (q.length === 0) {
+      setCountrySuggestions([])
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        setLoadingCountries(true)
+        const res = await apiGet(`/countries?q=${encodeURIComponent(q)}&include_continents=true&limit=8`)
+        const data = await res.json()
+        if (data && Array.isArray(data.data)) {
+          setCountrySuggestions(data.data)
+        } else {
+          setCountrySuggestions([])
+        }
+      } catch (e) {
+        setCountrySuggestions([])
+      } finally {
+        setLoadingCountries(false)
+      }
+    }, 250)
+    return () => clearTimeout(t)
+  }, [countryQuery])
+
+  const addCountry = (name: string) => {
+    if (!name) return
+    if (countries.includes(name)) return
+    setCountries(prev => [...prev, name])
+    setCountryQuery('')
+    setCountrySuggestions([])
+  }
+
   // Debounced search function
   const searchActivities = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -538,22 +575,43 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
               </UiBadge>
             ))}
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-col gap-2 items-start max-w-md">
             <UiInput
-              placeholder="Add a country (press Enter)"
+              placeholder="Type to search countries or continents"
+              value={countryQuery}
+              onChange={(e) => setCountryQuery(e.target.value)}
               onKeyDown={(e) => {
-                const target = e.target as HTMLInputElement
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  const value = target.value.trim()
-                  if (value && !countries.includes(value)) {
-                    setCountries(prev => [...prev, value])
+                  if (countrySuggestions.length > 0) {
+                    addCountry(countrySuggestions[0].name)
                   }
-                  target.value = ''
                 }
               }}
-              className="max-w-sm"
             />
+            {countryQuery && (
+              <div className="w-full border rounded-md bg-white shadow-sm max-h-64 overflow-y-auto">
+                {loadingCountries && (
+                  <div className="p-2 text-sm text-gray-500">Loading...</div>
+                )}
+                {!loadingCountries && countrySuggestions.length === 0 && (
+                  <div className="p-2 text-sm text-gray-500">No matches</div>
+                )}
+                {countrySuggestions.map((opt) => (
+                  <button
+                    key={`${opt.code || 'continent'}-${opt.name}`}
+                    type="button"
+                    onClick={() => addCountry(opt.name)}
+                    className="w-full text-left p-2 hover:bg-gray-50 text-sm"
+                  >
+                    {opt.name}
+                    {opt.continent && opt.code && (
+                      <span className="ml-2 text-gray-500">({opt.code})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </FormSection>
