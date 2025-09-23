@@ -90,8 +90,8 @@ class PassportExtractionService
             }
           ],
           reasoning_effort: 'minimal',
-          verbosity: 'high',
-          max_completion_tokens: 2000
+          max_completion_tokens: 1000,
+          temperature: 0.1
         }.to_json
         
         Rails.logger.info "[PassportExtraction] Sending request to OpenAI GPT-5..."

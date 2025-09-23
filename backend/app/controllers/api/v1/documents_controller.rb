@@ -1,5 +1,6 @@
 class Api::V1::DocumentsController < Api::V1::BaseController
   skip_before_action :authenticate_user!, only: [:upload, :extract_passport]
+  skip_jwt_auth :upload, :extract_passport
   before_action :set_company
   before_action :set_document, only: [:show, :destroy]
   
