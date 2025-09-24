@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_22_083326) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_24_063000) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -229,7 +229,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_22_083326) do
     t.string "storage_bucket", default: "documents"
     t.string "ocr_status", default: "pending"
     t.jsonb "ocr_data", default: {}
-    t.decimal "confidence_score", precision: 5, scale: 4
+    t.decimal "confidence_score", precision: 5, scale: 2
     t.text "extracted_text"
     t.jsonb "metadata", default: {}
     t.datetime "uploaded_at"

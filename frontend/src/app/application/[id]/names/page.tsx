@@ -22,20 +22,54 @@ export default function CompanyNamesPage({ params }: { params: { id: string } })
   const router = useRouter()
   const { applicationData, updateApplication, updateProgress } = useApplication()
   
-  const [nameOptions, setNameOptions] = useState<string[]>(
-    applicationData.name_options || ['', '', '']
-  )
+  const formDataArabicName = applicationData.form_data?.name_arabic as string | undefined
+  const formDataNameOptions = applicationData.form_data?.name_options as string[] | undefined
+  const [nameOptions, setNameOptions] = useState<string[]>(() => {
+    const initial = formDataNameOptions || applicationData.name_options || []
+    return [...initial, '', '', ''].slice(0, 3)
+  })
   const [arabicNames, setArabicNames] = useState<(string | null)[]>([null, null, null])
   const [translating, setTranslating] = useState<boolean[]>([false, false, false])
   const [validations, setValidations] = useState<(NameValidation | null)[]>([null, null, null])
   const [translationLimit, setTranslationLimit] = useState<number>(100)
   const [translationsUsed, setTranslationsUsed] = useState<number>(0)
   const [errors, setErrors] = useState<string[]>([])
+  const nameOptionsKey = JSON.stringify({
+    persisted: applicationData.name_options,
+    form: formDataNameOptions
+  })
   
   useEffect(() => {
     updateProgress(3, 'names')
     fetchTranslationLimit()
   }, [])
+
+  useEffect(() => {
+    const sourceOptions = formDataNameOptions || applicationData.name_options
+    if (sourceOptions && sourceOptions.length > 0) {
+      const padded = [...sourceOptions]
+      while (padded.length < 3) {
+        padded.push('')
+      }
+      const normalized = padded.slice(0, 3)
+      const normalizedKey = JSON.stringify(normalized)
+      if (normalizedKey !== nameOptionsKey) {
+        setNameOptions(normalized)
+      }
+    }
+  }, [nameOptionsKey])
+
+  useEffect(() => {
+    const existingArabic = applicationData.name_arabic || formDataArabicName
+    if (existingArabic) {
+      setArabicNames(prev => {
+        if (prev[0] === existingArabic) return prev
+        const updated = [...prev]
+        updated[0] = existingArabic
+        return updated
+      })
+    }
+  }, [applicationData.name_arabic, formDataArabicName])
 
   // Validate existing names when nameOptions changes (on mount or when loaded from application data)
   useEffect(() => {
@@ -184,7 +218,16 @@ export default function CompanyNamesPage({ params }: { params: { id: string } })
         updatedArabic[index] = data.translated
         setArabicNames(updatedArabic)
         
-        setTranslationsUsed(prev => prev + 1)
+        if (typeof data.remaining_requests === 'number') {
+          setTranslationsUsed(Math.max(0, translationLimit - data.remaining_requests))
+        } else {
+          setTranslationsUsed(prev => prev + 1)
+        }
+
+        await updateApplication({
+          name_options: nameOptions.filter(n => n && n.trim()),
+          name_arabic: data.translated
+        }, 'names')
       } else {
         setErrors([data.message || 'Translation failed'])
       }

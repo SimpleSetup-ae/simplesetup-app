@@ -6,15 +6,18 @@ set -e
 
 echo "🚀 Starting Simple Setup Corporate Tax Registration Agent..."
 
+# Resolve repository root and ensure consistent working directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$SCRIPT_DIR/.."
+cd "$REPO_ROOT"
+
 # Activate project environment
 echo "🔧 Activating project environment..."
-source ./activate-env.sh
+source "$REPO_ROOT/scripts/activate-env.sh"
 
-# Check if .env exists
-if [ ! -f .env ]; then
-    echo "⚠️  .env file not found. Copying from env.template..."
-    cp env.template .env
-    echo "✅ Please configure your .env file with actual values"
+# Check if .env exists (do not create or copy placeholders)
+if [ ! -f "$REPO_ROOT/.env" ]; then
+    echo "❌ .env file not found in project root. Please create it with actual values. Aborting."
     exit 1
 fi
 
@@ -53,14 +56,14 @@ else
 fi
 
 # Install dependencies if needed
-echo "📦 Installing dependencies..."
-if [ ! -d "node_modules" ]; then
+echo "📦 Installing root dependencies..."
+if [ -f "$REPO_ROOT/package.json" ] && [ ! -d "$REPO_ROOT/node_modules" ]; then
     npm install
 fi
 
 # Backend setup
 echo "🛠️  Setting up Rails backend..."
-cd backend
+pushd "$REPO_ROOT/backend" >/dev/null
 if [ ! -f "Gemfile" ]; then
     echo "⚠️  Backend not initialized yet. Skipping Rails setup."
 else
@@ -70,11 +73,11 @@ else
     rails server -p ${RAILS_PORT:-3001} &
     RAILS_PID=$!
 fi
-cd ..
+popd >/dev/null
 
 # Frontend setup
 echo "🌐 Setting up Next.js frontend..."
-cd frontend
+pushd "$REPO_ROOT/frontend" >/dev/null
 if [ ! -f "package.json" ]; then
     echo "⚠️  Frontend not initialized yet. Skipping Next.js setup."
 else
@@ -83,15 +86,15 @@ else
     npm run dev &
     NEXTJS_PID=$!
 fi
-cd ..
+popd >/dev/null
 
 # Start Sidekiq workers (when backend is ready)
-if [ -f "backend/Gemfile" ]; then
+if [ -f "$REPO_ROOT/backend/Gemfile" ]; then
     echo "⚙️  Starting Sidekiq workers..."
-    cd backend
+    pushd "$REPO_ROOT/backend" >/dev/null
     bundle exec sidekiq &
     SIDEKIQ_PID=$!
-    cd ..
+    popd >/dev/null
 fi
 
 echo ""

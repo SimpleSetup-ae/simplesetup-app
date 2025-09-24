@@ -95,13 +95,6 @@ class User < ApplicationRecord
     is_admin?
   end
   
-  private
-  
-  def generate_otp_code
-    # Generate 6-digit OTP code
-    SecureRandom.random_number(900000) + 100000
-  end
-  
   # Translation limit methods
   def increment_translation_count!
     reset_translation_counter_if_needed!
@@ -125,5 +118,12 @@ class User < ApplicationRecord
   
   def translation_limit_exceeded?
     translation_requests_count >= 100
+  end
+  
+  private
+  
+  def generate_otp_code
+    # Generate 6-digit OTP code
+    SecureRandom.random_number(900000) + 100000
   end
 end

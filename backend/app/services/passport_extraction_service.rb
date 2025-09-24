@@ -90,8 +90,8 @@ class PassportExtractionService
             }
           ],
           reasoning_effort: 'minimal',
-          max_completion_tokens: 1000,
-          temperature: 0.1
+          max_completion_tokens: 1000
+          # Note: GPT-5 only supports default temperature (1), so we remove the temperature parameter
         }.to_json
         
         Rails.logger.info "[PassportExtraction] Sending request to OpenAI GPT-5..."
@@ -201,20 +201,24 @@ class PassportExtractionService
           extracted_text = result.dig('candidates', 0, 'content', 'parts', 0, 'text')
           
           # Clean the response to get just JSON
-          json_match = extracted_text.match(/\{[^}]+\}/)
-          if json_match
-            extracted_data = JSON.parse(json_match[0])
-            cleaned_data = clean_passport_data(extracted_data)
-            
-            {
-              success: true,
-              data: cleaned_data,
-              confidence: calculate_confidence(cleaned_data),
-              service: 'google_gemini'
-            }
-          else
-            { success: false, error: 'Could not extract JSON from Gemini response' }
-          end
+          if extracted_text && extracted_text.length > 0
+            json_match = extracted_text.match(/\{[^}]+\}/)
+              if json_match
+                extracted_data = JSON.parse(json_match[0])
+                cleaned_data = clean_passport_data(extracted_data)
+                
+                {
+                  success: true,
+                  data: cleaned_data,
+                  confidence: calculate_confidence(cleaned_data),
+                  service: 'google_gemini'
+                }
+              else
+                { success: false, error: 'Could not extract JSON from Gemini response' }
+              end
+            else
+              { success: false, error: 'Empty response from Gemini' }
+            end
         else
           Rails.logger.error "Gemini API error: #{response.code} - #{response.body}"
           { success: false, error: "Gemini API error: #{response.code}" }

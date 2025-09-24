@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
-import { Eye, Search, Building2, Calendar, ExternalLink, FileText, Users, Shield } from 'lucide-react'
+import { Eye, Search, Building2, Calendar, ExternalLink, FileText, Users, Shield, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 interface Company {
@@ -32,6 +32,7 @@ interface Company {
 
 interface CompanyStats {
   total: number
+  approved: number
   active: number
   formed: number
   issued: number
@@ -39,6 +40,7 @@ interface CompanyStats {
 }
 
 const statusConfig = {
+  'approved': { label: 'Approved', color: 'bg-green-100 text-green-800' },
   'formed': { label: 'Formed', color: 'bg-green-100 text-green-800' },
   'active': { label: 'Active', color: 'bg-green-100 text-green-800' },
   'issued': { label: 'Issued', color: 'bg-blue-100 text-blue-800' },
@@ -48,7 +50,7 @@ const statusConfig = {
 
 export default function AdminCompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([])
-  const [stats, setStats] = useState<CompanyStats>({ total: 0, active: 0, formed: 0, issued: 0, expiringLicenses: 0 })
+  const [stats, setStats] = useState<CompanyStats>({ total: 0, approved: 0, active: 0, formed: 0, issued: 0, expiringLicenses: 0 })
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -85,19 +87,19 @@ export default function AdminCompaniesPage() {
       console.error('Error fetching companies:', error)
       // Set empty state on error
       setCompanies([])
-      setStats({ total: 0, active: 0, formed: 0, issued: 0, expiringLicenses: 0 })
+      setStats({ total: 0, approved: 0, active: 0, formed: 0, issued: 0, expiringLicenses: 0 })
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredCompanies = companies.filter(company => {
+const filteredCompanies = companies.filter(company => {
     const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (company.licenseNumber && company.licenseNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (company.ownerEmail && company.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (company.ownerFullName && company.ownerFullName.toLowerCase().includes(searchTerm.toLowerCase()))
     
-    const matchesStatus = statusFilter === 'all' || company.status === statusFilter
+  const matchesStatus = statusFilter === 'all' || company.status === statusFilter
     const matchesFreeZone = freeZoneFilter === 'all' || company.freeZone === freeZoneFilter
     
     return matchesSearch && matchesStatus && matchesFreeZone
@@ -139,7 +141,7 @@ export default function AdminCompaniesPage() {
     <DashboardLayout title="Companies" description="Manage all formed companies">
       <div className="space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Companies</CardTitle>
@@ -147,6 +149,16 @@ export default function AdminCompaniesPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Approved</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
             </CardContent>
           </Card>
 
@@ -213,6 +225,7 @@ export default function AdminCompaniesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="formed">Formed</SelectItem>
                   <SelectItem value="issued">Issued</SelectItem>

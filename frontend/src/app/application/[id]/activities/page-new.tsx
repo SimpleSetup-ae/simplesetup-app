@@ -440,3 +440,4 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
     </StandardFormLayout>
   )
 }
+

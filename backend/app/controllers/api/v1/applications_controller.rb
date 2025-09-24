@@ -2,6 +2,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
   skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim]
   before_action :set_company, except: [:create, :index, :admin_index]
+  skip_jwt_auth :admin_index, :admin_show, :admin_update
   before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
   
   # GET /api/v1/applications (for logged-in users)
@@ -162,7 +163,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   def admin_index
     @companies = Company.admin_viewable
                         .includes(:owner, :application_progress, :documents)
-                        .order(submitted_at: :desc)
+                        .order(Arel.sql("COALESCE(submitted_at, created_at) DESC"))
     
     # Apply filters
     @companies = @companies.where(status: params[:status]) if params[:status].present?
@@ -367,7 +368,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       submittedAt: (company.submitted_at || company.created_at)&.iso8601,
       userEmail: company.owner&.email,
       userFullName: company.owner&.full_name,
-      isAnonymous: company.anonymous_draft?,
+      isAnonymous: company.owner_id.nil?,
       packageType: determine_package_type(company),
       estimatedAnnualTurnover: company.estimated_annual_turnover,
       completionPercentage: company.application_progress&.percent || 0,

@@ -30,6 +30,15 @@ Rails.application.routes.draw do
       post '/auth/verify_otp', to: 'otp#verify_otp'
       post '/auth/resend_otp', to: 'otp#resend_otp'
       
+      resources :inline_registrations, only: [:create] do
+        collection do
+          post :verify_email
+          post :update_phone
+          post :resend_otp
+          post :skip_phone
+        end
+      end
+
       # Applications (New Sign-up Flow)
       resources :applications do
         member do

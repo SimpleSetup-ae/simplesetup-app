@@ -115,3 +115,4 @@ export function StepProgress({ steps, currentStep, className }: StepProgressProp
     </div>
   )
 }
+

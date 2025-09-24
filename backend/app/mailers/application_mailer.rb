@@ -1,5 +1,19 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: 'noreply@simplesetup.ae'
+  # Dynamic sender based on environment and configuration
+  def self.sender_email
+    if Rails.env.production? || ENV['ENABLE_SENDGRID'] == 'true'
+      # Use verified SendGrid sender identity
+      'noreply@simplesetup.ae'
+    elsif ENV['ENABLE_REAL_EMAILS'] == 'true'
+      # Use Gmail for development testing
+      ENV['GMAIL_USERNAME'] || 'james.o.campion@gmail.com'
+    else
+      # Default for development (emails won't actually send)
+      'dev@simplesetup.local'
+    end
+  end
+  
+  default from: sender_email
   layout 'mailer'
   
   def submission_confirmation(company)

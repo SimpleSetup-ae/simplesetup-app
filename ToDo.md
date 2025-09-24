@@ -649,9 +649,59 @@ This MVP provides **core functionality for UAE company formation**:
 
 
 
+## 🎯 CURRENT PRIORITY: User Sign-Up Flow Integration
+
+### Overview
+Adding user registration step after "Company Formation Application" page to capture user credentials and associate subsequent form steps with authenticated users.
+
+### User Flow
+1. **Anonymous Start** → Company Formation Application page (current)
+2. **Sign Up/Sign In** → Capture email & password (NEW)
+3. **Email Verification** → OTP or confirmation link (NEW)
+4. **Phone Number** → International dialing code + number (NEW)
+5. **Continue Application** → Business Activities (existing flow continues)
+
+### Implementation Tasks
+
+#### Backend Development
+- [ ] Create inline registration endpoint that preserves draft_token
+- [ ] Add phone number validation with international format support
+- [ ] Implement email verification flow (OTP/confirmation link)
+- [ ] Update application claim logic for post-signup flow
+- [ ] Add rate limiting for registration attempts
+
+#### Frontend Components
+- [ ] Create UserSignUpStep component for wizard integration
+- [ ] Build PhoneNumberInput with country code picker
+- [ ] Add EmailVerificationStep with OTP input
+- [ ] Design sign-up UI matching orange/white theme
+- [ ] Update wizard navigation for authenticated flow
+
+#### Integration & Testing
+- [ ] Test anonymous → authenticated transition
+- [ ] Verify draft claiming after sign-up
+- [ ] Test existing user login within flow
+- [ ] Validate session persistence across steps
+- [ ] Mobile responsiveness testing
+
+### Technical Details
+- **Authentication**: Devise + JWT (existing)
+- **Database**: phone_number field exists in users table
+- **Components**: Reuse AuthenticationModal patterns
+- **Theme**: Orange gradients, Merriweather/Inter fonts
+- **Validation**: Email regex, password strength, phone formatting
+
+### Success Metrics
+- Sign-up completion rate > 80%
+- Email verification rate > 95%
+- Time to complete < 2 minutes
+- Zero data loss during transition
+
+---
+
 Emirates ID upload component - 
 Existing Business License component -
 
-Busines Activities component - 
+Business Activities component - 
 
-Then then form options will be 
+Then the form options will be 

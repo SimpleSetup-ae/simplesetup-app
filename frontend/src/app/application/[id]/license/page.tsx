@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import { PricingBanner } from '@/components/application/PricingBanner'
-import { AuthenticationModal } from '@/components/application/AuthenticationModal'
+// import { AuthenticationModal } from '@/components/application/AuthenticationModal' // Not needed - using dedicated pages
 import { ArrowLeft, ArrowRight, Info, Calculator } from 'lucide-react'
 
 // Custom hooks for cleaner state management
@@ -288,7 +288,6 @@ export default function LicenseVisasPage({ params }: { params: { id: string } })
     applicationData.establishment_card !== undefined ? applicationData.establishment_card : false
   )
   const [errors, setErrors] = useState<string[]>([])
-  const [showAuthModal, setShowAuthModal] = useState(false)
   
   // Use the custom hook for visa allocation
   const visaAllocation = useVisaAllocation(visaPackage)
@@ -362,10 +361,10 @@ export default function LicenseVisasPage({ params }: { params: { id: string } })
     const isAuthenticated = !!localStorage.getItem('auth_token')
     
     if (!isAuthenticated) {
-      // Show authentication modal
-      setShowAuthModal(true)
+      // Navigate to sign-up page in the flow
+      router.push(`/application/${params.id}/signup`)
     } else {
-      // Continue to next step
+      // Continue to next step (user already authenticated)
       router.push(`/application/${params.id}/activities`)
     }
   }
@@ -374,11 +373,6 @@ export default function LicenseVisasPage({ params }: { params: { id: string } })
     router.push(`/application/${params.id}/start`)
   }
   
-  const handleAuthSuccess = (user: any) => {
-    // Authentication successful, continue to next step
-    setShowAuthModal(false)
-    router.push(`/application/${params.id}/activities`)
-  }
   
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -508,13 +502,6 @@ export default function LicenseVisasPage({ params }: { params: { id: string } })
         </div>
       </div>
       
-      {/* Authentication Modal */}
-      <AuthenticationModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={handleAuthSuccess}
-        draftToken={applicationData.draft_token}
-      />
     </div>
   )
 }
