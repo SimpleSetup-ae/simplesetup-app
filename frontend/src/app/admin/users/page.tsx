@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
-import { Eye, Search, Plus, Edit, Trash2, Shield, Users, Mail, Calendar, UserPlus, UserCheck, UserX } from 'lucide-react'
+import { Eye, Search, Plus, Edit, Trash2, Shield, UserPlus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface AdminUser {
@@ -20,6 +20,9 @@ interface AdminUser {
   firstName: string
   lastName: string
   fullName: string
+  phoneNumber?: string
+  phoneVerified?: boolean
+  applicationStatus: string
   isAdmin: boolean
   createdAt: string
   lastSignInAt?: string
@@ -29,13 +32,6 @@ interface AdminUser {
   companiesCount: number
 }
 
-interface UserStats {
-  total: number
-  admins: number
-  active: number
-  locked: number
-  unconfirmed: number
-}
 
 interface NewUserData {
   email: string
@@ -47,7 +43,6 @@ interface NewUserData {
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([])
-  const [stats, setStats] = useState<UserStats>({ total: 0, admins: 0, active: 0, locked: 0, unconfirmed: 0 })
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -85,7 +80,6 @@ export default function AdminUsersPage() {
       
       if (data.success) {
         setUsers(data.users)
-        setStats(data.stats)
       } else {
         throw new Error(data.message || 'Failed to fetch users')
       }
@@ -93,7 +87,6 @@ export default function AdminUsersPage() {
       console.error('Error fetching users:', error)
       // Set empty state on error
       setUsers([])
-      setStats({ total: 0, admins: 0, active: 0, locked: 0, unconfirmed: 0 })
     } finally {
       setLoading(false)
     }
@@ -166,37 +159,6 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleToggleAdminStatus = async (userId: string, isAdmin: boolean) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/v1/admin/users/${userId}/toggle_admin`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        toast({
-          title: "User Updated",
-          description: data.message,
-        })
-        
-        await fetchUsers()
-      } else {
-        throw new Error(data.message || 'Failed to update user')
-      }
-    } catch (error) {
-      console.error('Error updating user:', error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update user. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleToggleLockStatus = async (userId: string, locked: boolean) => {
     try {
@@ -248,58 +210,6 @@ export default function AdminUsersPage() {
   return (
     <DashboardLayout title="Users" description="Manage admin users and permissions">
       <div className="space-y-6">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Admin Users</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{stats.admins}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.active}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Locked Users</CardTitle>
-              <UserX className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.locked}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unconfirmed</CardTitle>
-              <Mail className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.unconfirmed}</div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Actions and Filters */}
         <Card>
@@ -356,6 +266,8 @@ export default function AdminUsersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Application Status</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Companies</TableHead>
@@ -373,6 +285,40 @@ export default function AdminUsersPage() {
                           <div className="font-semibold">{user.fullName}</div>
                           <div className="text-sm text-gray-500">{user.email}</div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {user.phoneNumber ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-sm">{user.phoneNumber}</span>
+                            {user.phoneVerified && (
+                              <Badge variant="secondary" className="text-xs">
+                                Verified
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">No phone</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.applicationStatus === 'no_application' ? (
+                          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md">No Application</span>
+                        ) : (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              user.applicationStatus === 'approved' ? 'text-green-700 border-green-200 bg-green-50' :
+                              user.applicationStatus === 'submitted' ? 'text-blue-700 border-blue-200 bg-blue-50' :
+                              user.applicationStatus === 'under_review' ? 'text-amber-700 border-amber-200 bg-amber-50' :
+                              user.applicationStatus === 'rejected' ? 'text-red-700 border-red-200 bg-red-50' :
+                              user.applicationStatus === 'draft' ? 'text-gray-700 border-gray-200 bg-gray-50' :
+                              'text-gray-700 border-gray-200 bg-gray-50'
+                            }`}
+                          >
+                            {user.applicationStatus === 'under_review' ? 'Under Review' :
+                             user.applicationStatus.charAt(0).toUpperCase() + user.applicationStatus.slice(1)}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.isAdmin ? 'default' : 'secondary'}>
@@ -441,6 +387,40 @@ export default function AdminUsersPage() {
                                       <p className="text-sm text-gray-600">{selectedUser.email}</p>
                                     </div>
                                     <div>
+                                      <label className="text-sm font-medium">Phone Number</label>
+                                      {selectedUser.phoneNumber ? (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm text-gray-600">{selectedUser.phoneNumber}</span>
+                                          {selectedUser.phoneVerified && (
+                                            <Badge variant="secondary" className="text-xs">Verified</Badge>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <p className="text-sm text-gray-400">No phone number</p>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="text-sm font-medium">Application Status</label>
+                                      {selectedUser.applicationStatus === 'no_application' ? (
+                                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md inline-block">No Application</span>
+                                      ) : (
+                                        <Badge 
+                                          variant="outline" 
+                                          className={`text-xs ${
+                                            selectedUser.applicationStatus === 'approved' ? 'text-green-700 border-green-200 bg-green-50' :
+                                            selectedUser.applicationStatus === 'submitted' ? 'text-blue-700 border-blue-200 bg-blue-50' :
+                                            selectedUser.applicationStatus === 'under_review' ? 'text-amber-700 border-amber-200 bg-amber-50' :
+                                            selectedUser.applicationStatus === 'rejected' ? 'text-red-700 border-red-200 bg-red-50' :
+                                            selectedUser.applicationStatus === 'draft' ? 'text-gray-700 border-gray-200 bg-gray-50' :
+                                            'text-gray-700 border-gray-200 bg-gray-50'
+                                          }`}
+                                        >
+                                          {selectedUser.applicationStatus === 'under_review' ? 'Under Review' :
+                                           selectedUser.applicationStatus.charAt(0).toUpperCase() + selectedUser.applicationStatus.slice(1)}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div>
                                       <label className="text-sm font-medium">Role</label>
                                       <Badge variant={selectedUser.isAdmin ? 'default' : 'secondary'}>
                                         {selectedUser.isAdmin ? 'Admin' : 'User'}
@@ -477,13 +457,6 @@ export default function AdminUsersPage() {
                                   </div>
                                   
                                   <div className="flex gap-2 pt-4 border-t">
-                                    <Button 
-                                      size="sm" 
-                                      variant={selectedUser.isAdmin ? "destructive" : "default"}
-                                      onClick={() => handleToggleAdminStatus(selectedUser.id, selectedUser.isAdmin)}
-                                    >
-                                      {selectedUser.isAdmin ? 'Revoke Admin' : 'Grant Admin'}
-                                    </Button>
                                     <Button 
                                       size="sm" 
                                       variant="outline"

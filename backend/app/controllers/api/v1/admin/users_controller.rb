@@ -1,4 +1,4 @@
-class Api::V1::Admin::UsersController < Api::V1::BaseController
+class Api::V1::Admin::UsersController < ApplicationController
   before_action :require_admin
   before_action :set_user, only: [:show, :update, :destroy, :toggle_admin, :toggle_lock]
   
@@ -13,7 +13,7 @@ class Api::V1::Admin::UsersController < Api::V1::BaseController
     
     case params[:status]
     when 'active'
-      @users = @users.where(confirmed_at: !nil, locked_at: nil)
+      @users = @users.where.not(confirmed_at: nil).where(locked_at: nil)
     when 'locked'
       @users = @users.where.not(locked_at: nil)
     when 'unconfirmed'
@@ -140,12 +140,19 @@ class Api::V1::Admin::UsersController < Api::V1::BaseController
   end
   
   def serialize_admin_user(user)
+    # Get the latest application status for this user
+    latest_company = user.owned_companies.order(created_at: :desc).first
+    application_status = latest_company&.status || 'no_application'
+    
     {
       id: user.id,
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
       fullName: user.full_name,
+      phoneNumber: user.phone_number,
+      phoneVerified: user.phone_verified || false,
+      applicationStatus: application_status,
       isAdmin: user.admin?,
       createdAt: user.created_at.iso8601,
       lastSignInAt: user.last_sign_in_at&.iso8601,
@@ -180,7 +187,7 @@ class Api::V1::Admin::UsersController < Api::V1::BaseController
     {
       total: all_users.count,
       admins: all_users.where(is_admin: true).count,
-      active: all_users.where(confirmed_at: !nil, locked_at: nil).count,
+      active: all_users.where.not(confirmed_at: nil).where(locked_at: nil).count,
       locked: all_users.where.not(locked_at: nil).count,
       unconfirmed: all_users.where(confirmed_at: nil).count
     }

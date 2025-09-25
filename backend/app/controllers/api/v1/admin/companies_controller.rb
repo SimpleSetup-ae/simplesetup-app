@@ -1,6 +1,6 @@
-class Api::V1::Admin::CompaniesController < Api::V1::BaseController
+class Api::V1::Admin::CompaniesController < ApplicationController
   before_action :require_admin
-  before_action :set_company, only: [:show, :update]
+  before_action :set_company, only: [:show]
   
   # GET /api/v1/admin/companies
   def index
@@ -43,7 +43,7 @@ class Api::V1::Admin::CompaniesController < Api::V1::BaseController
   end
   
   def require_admin
-    unless current_user&.admin?
+    unless current_user&.is_admin?
       render json: { error: 'Admin access required' }, status: :forbidden
     end
   end

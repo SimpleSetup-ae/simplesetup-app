@@ -21,9 +21,6 @@ export default function Navigation() {
           {/* Navigation Links */}
           {isSignedIn && (
             <div className="hidden md:flex items-center space-x-8">
-              <Link href="/dashboard" className="text-gray-700 hover:text-gray-900 transition-colors">
-                Dashboard
-              </Link>
               <Link href="/companies" className="text-gray-700 hover:text-gray-900 transition-colors">
                 Companies
               </Link>
