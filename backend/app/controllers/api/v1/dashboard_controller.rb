@@ -108,9 +108,9 @@ class Api::V1::DashboardController < ApplicationController
       establishment_card_expiry_date: company.establishment_card_expiry_date&.iso8601,
       
       # Contact information
-      official_email: company.official_email,
-      phone: company.phone,
-      website: company.website,
+      official_email: company.respond_to?(:official_email) ? company.official_email : nil,
+      phone: company.respond_to?(:phone) ? company.phone : nil,
+      website: company.respond_to?(:website) ? company.website : nil,
       
       # People
       shareholders: shareholders,
@@ -200,11 +200,12 @@ class Api::V1::DashboardController < ApplicationController
       end
       
       # Tax registration deadline notifications
-      if company.needs_tax_registration?
-        days_until_deadline = company.days_until_tax_deadline
+      if company.respond_to?(:needs_tax_registration?) && company.needs_tax_registration?
+        days_until_deadline = company.respond_to?(:days_until_tax_deadline) ? company.days_until_tax_deadline : nil
         
         if days_until_deadline && days_until_deadline <= 60
-          urgency = case company.tax_deadline_status
+          tax_deadline_status = company.respond_to?(:tax_deadline_status) ? company.tax_deadline_status : 'warning'
+          urgency = case tax_deadline_status
                    when 'overdue' then 'critical'
                    when 'urgent' then 'high'
                    when 'warning' then 'medium'

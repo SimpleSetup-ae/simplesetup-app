@@ -109,6 +109,7 @@ function CompaniesPageContent() {
   const [company, setCompany] = useState<CompanyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [noCompany, setNoCompany] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     company_website: '',
@@ -151,7 +152,8 @@ function CompaniesPageContent() {
       const userCompany = data.data.companies[0]
       
       if (!userCompany) {
-        setError('No company found for your account')
+        // User has no companies yet - this is okay, show appropriate message
+        setNoCompany(true)
         return
       }
       
@@ -259,7 +261,7 @@ function CompaniesPageContent() {
     )
   }
 
-  if (error || !company) {
+  if (error) {
     return (
       <div className="flex h-screen bg-gray-50">
         <div className="w-64 flex-shrink-0">
@@ -268,13 +270,51 @@ function CompaniesPageContent() {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p className="text-gray-600">{error || 'No company data available'}</p>
+            <p className="text-gray-600">{error}</p>
             <Button 
               onClick={fetchCompanyData} 
               className="mt-4 bg-gradient-to-r from-orange-500 to-gray-400"
             >
               Retry
             </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (noCompany) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-64 flex-shrink-0">
+          <Sidebar className="h-full" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold mb-2">No Companies Yet</h2>
+            <p className="text-gray-600 mb-6">You don't have any companies registered yet.</p>
+            <Link href="/application/new">
+              <Button className="bg-gradient-to-r from-orange-500 to-gray-400">
+                Start Company Formation
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!company) {
+    return (
+      <div className="flex h-screen bg-gray-50">
+        <div className="w-64 flex-shrink-0">
+          <Sidebar className="h-full" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 text-gray-400 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading company data...</p>
           </div>
         </div>
       </div>
