@@ -1,9 +1,17 @@
 class Api::V1::ApplicationsController < Api::V1::BaseController
+  # Authentication configuration:
+  # - Anonymous actions: create, show, update (for draft applications)
+  # - JWT actions: claim, submit (during inline registration)
+  # - Devise actions: index (user dashboard), admin_* (admin panel)
   skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
   skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim]
-  before_action :set_company, except: [:create, :index, :admin_index]
+  
+  # Admin endpoints use Devise session authentication exclusively
   skip_jwt_auth :admin_index, :admin_show, :admin_update
-  before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
+  
+  # Admin endpoints require Devise session authentication + admin privileges
+  before_action :authenticate_admin!, only: [:admin_index, :admin_show, :admin_update]
+  before_action :set_company, except: [:create, :index, :admin_index]
   
   # GET /api/v1/applications (for logged-in users)
   def index
@@ -244,8 +252,9 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
     
     # For authenticated users, ensure they have access
+    # Admins can access any company, regular users only their own
     if @company && current_user && !@company.anonymous_draft?
-      unless @company.can_be_accessed_by?(current_user)
+      unless current_user.is_admin? || @company.can_be_accessed_by?(current_user)
         render json: { error: 'Unauthorized' }, status: :forbidden
         return
       end
@@ -257,9 +266,25 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
   end
   
-  def require_admin
-    unless current_user&.is_admin?
-      render json: { error: 'Admin access required' }, status: :forbidden
+  # Authenticate admin users using Devise session
+  # Ensures user is logged in via Devise and has admin privileges
+  def authenticate_admin!
+    # First check if user is authenticated via Devise session
+    unless current_user
+      render json: { 
+        error: 'Authentication required',
+        message: 'Please sign in to access admin features'
+      }, status: :unauthorized
+      return
+    end
+    
+    # Then verify admin privileges
+    unless current_user.is_admin?
+      render json: { 
+        error: 'Admin access required',
+        message: 'You do not have permission to access this resource'
+      }, status: :forbidden
+      return
     end
   end
   

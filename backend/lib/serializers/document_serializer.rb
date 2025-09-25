@@ -1,5 +1,14 @@
 class DocumentSerializer < BaseSerializer
-  def self.serialize(document, include_urls: false, admin: false)
+  def self.serialize(document, options = {})
+    # Handle both positional and keyword arguments
+    if options.is_a?(Hash)
+      include_urls = options[:include_urls] || false
+      admin = options[:admin] || false
+    else
+      # Legacy support for keyword arguments
+      include_urls = options
+      admin = false
+    end
     data = {
       id: document.id,
       name: document.name,

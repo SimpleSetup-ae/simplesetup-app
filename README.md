@@ -70,11 +70,11 @@ This will start all services:
 
 ### Phase 1 (MVP)
 - [x] Monorepo structure
- - [x] Devise authentication
-- [ ] Company formation workflow
-- [ ] Document upload with OCR
-- [ ] YAML-driven workflow engine
-- [ ] Basic dashboard and forms
+- [x] Dual authentication system (JWT for inline registration, Devise for dashboard)
+- [x] Company formation workflow
+- [x] Document upload with OCR
+- [x] Admin dashboard for application management
+- [x] Anonymous application flow with inline registration
 
 ### Phase 2
 - [ ] Stripe payment integration
@@ -102,10 +102,18 @@ This will start all services:
 - Use pull requests for code review
 - Squash and merge when ready
 
+### Authentication Architecture
+
+The application uses a dual authentication system:
+- **JWT Tokens**: Used only for inline registration during the application flow
+- **Devise Sessions**: Used for all dashboard access (admin and client)
+
+This allows anonymous users to start applications without creating an account, while ensuring secure access to authenticated areas. See [AUTHENTICATION.md](./AUTHENTICATION.md) for detailed documentation.
+
 ### Environment Variables
 Copy `env.template` to `.env` and configure:
 - Supabase credentials
- - Devise secret key and mailer keys
+- Devise secret key and session configuration
 - AI service API keys
 - Stripe keys (Phase 2)
 

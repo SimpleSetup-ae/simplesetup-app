@@ -15,7 +15,7 @@ Rails.application.routes.draw do
       # Authentication
       get '/auth/me', to: 'auth#me'
       post '/auth/sign_in', to: 'auth#login'
-      delete '/auth/sign_out', to: 'auth#sign_out'
+      delete '/auth/sign_out', to: 'auth#logout'
       
       # Dashboard
       get '/dashboard', to: 'dashboard#show'

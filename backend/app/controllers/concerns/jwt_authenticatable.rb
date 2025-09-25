@@ -1,3 +1,13 @@
+# JWT Authentication Concern
+# 
+# This concern handles JWT token authentication for the inline registration flow.
+# It is used ONLY when anonymous users create accounts during the application process.
+# 
+# Authentication Strategy:
+# 1. Anonymous application flow: No authentication required
+# 2. Inline registration: JWT tokens for immediate access after signup
+# 3. Dashboard/Admin access: Devise session authentication (NOT handled here)
+
 module JwtAuthenticatable
   extend ActiveSupport::Concern
 
@@ -7,72 +17,97 @@ module JwtAuthenticatable
 
   private
 
+  # Authenticate user from JWT token
+  # Only called for actions that require JWT authentication
   def authenticate_from_jwt_token!
     return if skip_jwt_auth?
 
-    # Try to get token from Authorization header first
-    auth_header = request.headers['Authorization']
-    token = if auth_header&.start_with?('Bearer ')
-              auth_header.gsub('Bearer ', '')
-            else
-              # Fallback to token parameter (for development/testing)
-              params[:token]
-            end
+    # Extract JWT token from Authorization header or params
+    token = extract_jwt_token
+    
+    if token.blank?
+      render_unauthorized('Authentication required')
+      return
+    end
 
-    return render_unauthorized('JWT token required') if token.blank?
-
+    # Decode and validate JWT token
     payload = JwtService.decode(token)
-    return render_unauthorized('Invalid JWT token') if payload.blank?
+    
+    if payload.blank?
+      render_unauthorized('Invalid authentication token')
+      return
+    end
 
-    # Check if token is expired
-    return render_unauthorized('Token expired') if token_expired?(payload)
+    # Check token expiration
+    if token_expired?(payload)
+      render_unauthorized('Authentication token expired')
+      return
+    end
 
-    # Find user
+    # Find user from JWT payload
     user = User.find_by(id: payload['user_id'])
-    return render_unauthorized('User not found') unless user
+    
+    unless user
+      render_unauthorized('User not found')
+      return
+    end
 
-    # Check if user account is locked
-    return render_unauthorized('Account locked') if user.locked_at.present?
+    # Check if account is locked
+    if user.locked_at.present?
+      render_unauthorized('Account locked')
+      return
+    end
 
-    # Prefer Devise's warden session if available, otherwise set request-scoped user
-    begin
-      sign_in(:user, user, store: false) if respond_to?(:sign_in)
-    rescue StandardError
-      # Fallback to request-scoped assignment when warden is not available here
-      @jwt_current_user = user
+    # Set current user for this request
+    @jwt_current_user = user
+  end
+
+  # Override current_user to handle both JWT and Devise authentication
+  def current_user
+    # For actions that skip JWT, use Devise's current_user
+    if skip_jwt_auth?
+      super if defined?(super)
     else
-      @jwt_current_user = user
+      # For JWT-authenticated actions, use JWT user
+      @jwt_current_user
     end
   end
 
-  # Do NOT override Devise helpers. Prefer Devise's current_user if present.
-  def current_user
-    devise_user = (super() if defined?(super))
-    return devise_user if devise_user.present?
-    @jwt_current_user
-  end
-
+  # Check if user is signed in (either via JWT or Devise)
   def user_signed_in?
-    # Use Devise's implementation when available
-    return super() if defined?(super)
     current_user.present?
   end
 
+  # Determine if JWT authentication should be skipped
   def skip_jwt_auth?
-    # Skip JWT auth for specific actions that don't require authentication
+    # Skip for actions explicitly marked to skip
     return true if self.class.skip_jwt_auth_actions&.include?(action_name.to_sym)
-
-    # Skip for health checks and public endpoints
+    
+    # Skip for health checks
     controller_name == 'rails/health' || action_name == 'up'
   end
 
+  # Extract JWT token from request
+  def extract_jwt_token
+    auth_header = request.headers['Authorization']
+    
+    if auth_header&.start_with?('Bearer ')
+      auth_header.gsub('Bearer ', '')
+    else
+      # Fallback to token parameter for development/testing
+      params[:token]
+    end
+  end
+
+  # Check if JWT token is expired
   def token_expired?(payload)
     exp = payload['exp']
     return true unless exp
-
+    
     Time.at(exp) < Time.current
   end
 
+  # Render unauthorized response
   def render_unauthorized(message = 'Unauthorized')
     render json: {
       success: false,
@@ -82,6 +117,7 @@ module JwtAuthenticatable
   end
 
   module ClassMethods
+    # Mark actions that should skip JWT authentication
     def skip_jwt_auth(*actions)
       @skip_jwt_auth_actions = actions.flatten
     end
