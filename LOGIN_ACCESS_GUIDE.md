@@ -151,3 +151,4 @@ bundle exec rails db:seed
 
 The admin dashboard provides full oversight of all submitted applications, while the user dashboard shows personalized application tracking! 🎉
 
+

@@ -8,3 +8,4 @@
 - **Database migrations required**: None anticipated; admin user already seeded and schema supports Devise lockable/confirmable fields.
 - **API endpoints to create/modify**: Likely adjust existing `/api/v1/auth/sign_in` (and possibly `/api/v1/auth/me`) to ensure lowercase email handling and admin session persistence; verify no new endpoints needed.
 
+

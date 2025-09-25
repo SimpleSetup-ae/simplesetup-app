@@ -77,3 +77,4 @@ If `/application/new` is not working:
 - `middleware.ts` - Allows `/application` routes as public
 - Backend: `app/controllers/api/v1/applications_controller.rb#create`
 
+

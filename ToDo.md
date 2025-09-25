@@ -669,6 +669,7 @@ Adding user registration step after "Company Formation Application" page to capt
 - [ ] Implement email verification flow (OTP/confirmation link)
 - [ ] Update application claim logic for post-signup flow
 - [ ] Add rate limiting for registration attempts
+- [ ] Reset Devise session before each login to avoid admin/client cross-over sessions
 
 #### Frontend Components
 - [ ] Create UserSignUpStep component for wizard integration

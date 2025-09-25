@@ -24,6 +24,7 @@ class Api::V1::AuthController < ApplicationController
     user = User.find_for_authentication(email: email)
     
     if user&.valid_password?(params[:password])
+      reset_session
       sign_in :user, user
       # Ensure session cookie is written for API clients
       request.session[:user_id] = user.id

@@ -169,3 +169,4 @@ If you're still having issues:
 4. Check spam folder for emails
 5. Ensure Rails server was restarted after config changes
 
+
