@@ -28,14 +28,14 @@ export default function SignInPage() {
     try {
       const user = await signIn(email, password)
       
-      // Force a page reload to clear any cached auth state and properly initialize the new session
-      // This ensures the AuthProvider gets the fresh user data from the backend
+      // Force a complete page reload to ensure new session cookie is used
+      // This prevents the circular session persistence issue
       if (searchParams.get('redirect')) {
-        window.location.href = redirect
+        window.location.replace(redirect)
       } else {
         // Otherwise, redirect based on user role
         const defaultPath = user.isAdmin ? '/admin/applications' : '/companies'
-        window.location.href = defaultPath
+        window.location.replace(defaultPath)
       }
     } catch (err: any) {
       setError(err.message || 'Sign in failed')
