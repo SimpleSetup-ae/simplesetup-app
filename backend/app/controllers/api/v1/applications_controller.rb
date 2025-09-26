@@ -3,8 +3,8 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   # - Anonymous actions: create, show, update (for draft applications)
   # - JWT actions: claim, submit (during inline registration)
   # - Devise actions: index (user dashboard), admin_* (admin panel)
-  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
-  skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim]
+  skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim, :mark_started]
+  skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim, :mark_started]
   
   # Admin endpoints use Devise session authentication exclusively
   skip_jwt_auth :admin_index, :admin_show, :admin_update
@@ -101,6 +101,32 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
     
     render json: { success: true }
+  end
+
+  # POST /api/v1/applications/:id/mark_started
+  def mark_started
+    # Only mark as started if application is still in draft/anonymous_draft status
+    if @company.anonymous_draft? || @company.draft?
+      @company.update!(status: 'started')
+      
+      render json: {
+        success: true,
+        message: 'Application marked as started',
+        status: @company.status
+      }
+    else
+      render json: {
+        success: true,
+        message: 'Application already progressed beyond started status',
+        status: @company.status
+      }
+    end
+  rescue => e
+    Rails.logger.error "Mark started error: #{e.message}"
+    render json: {
+      success: false,
+      error: 'Failed to mark application as started'
+    }, status: :internal_server_error
   end
   
   # POST /api/v1/applications/:id/claim (after user signs up)

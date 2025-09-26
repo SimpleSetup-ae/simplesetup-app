@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Calculator, FileText, Calendar, DollarSign, AlertCircle, CheckCircle, Loader2, Plus } from 'lucide-react'
 import { apiGet } from '@/lib/api'
+import TaxCalendar from '@/components/accounting/TaxCalendar'
 
 interface TaxRegistration {
   id: string
@@ -327,35 +328,7 @@ export default function AccountingPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Deadlines</CardTitle>
-              <CardDescription>
-                Important tax filing and compliance dates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-orange-500" />
-                    <div>
-                      <p className="font-medium">Corporate Tax Return</p>
-                      <p className="text-sm text-gray-600">Sample Tech Solutions LLC</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium">Sep 30, 2024</p>
-                    <p className="text-sm text-orange-600">245 days left</p>
-                  </div>
-                </div>
-                
-                <div className="text-center py-4 text-gray-500">
-                  <p className="text-sm">No other deadlines in the next 90 days</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TaxCalendar monthsAhead={6} />
         </div>
       </div>
     </DashboardLayout>

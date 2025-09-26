@@ -45,6 +45,7 @@ Rails.application.routes.draw do
           patch :progress
           post :claim
           post :submit
+          post :mark_started
         end
         collection do
           get 'admin', to: 'applications#admin_index'
@@ -162,6 +163,9 @@ Rails.application.routes.draw do
       
       # Tax Registrations
       resources :tax_registrations do
+        collection do
+          get :tax_calendar
+        end
         member do
           post :apply
           post :approve

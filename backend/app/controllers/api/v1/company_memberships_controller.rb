@@ -1,21 +1,53 @@
 class Api::V1::CompanyMembershipsController < ApplicationController
-  before_action :set_company, only: [:index, :create, :invite, :remove]
-  before_action :set_membership, only: [:show, :update, :destroy, :accept, :reject]
+  before_action :set_company, only: [:index, :create, :invite]
+  before_action :set_membership, only: [:show, :update, :destroy]
   before_action :authorize_membership_access
   
   def index
+    # Handle case when user has no companies
+    unless @company
+      return render json: {
+        success: true,
+        data: {
+          members: [],
+          pending_invitations: [],
+          stats: {
+            total_members: 0,
+            pending_count: 0,
+            active_count: 0
+          }
+        }
+      }
+    end
+    
     @memberships = @company.company_memberships.includes(:user)
     @pending_invitations = @company.company_invitations.pending if defined?(CompanyInvitation)
+    
+    # Build members array including the owner if they don't have a membership record
+    members = []
+    
+    # Add the owner as a virtual membership if they exist and don't have a membership
+    if @company.owner && !@memberships.exists?(user: @company.owner)
+      owner_membership = serialize_owner_as_membership(@company)
+      members << owner_membership if owner_membership
+    end
+    
+    # Add all existing memberships
+    members += @memberships.map { |membership| serialize_membership(membership) }
+    
+    # Calculate stats including the owner
+    total_members = members.count
+    active_count = members.count { |m| m[:accepted] }
     
     render json: {
       success: true,
       data: {
-        members: @memberships.map { |membership| serialize_membership(membership) },
+        members: members,
         pending_invitations: @pending_invitations ? @pending_invitations.map { |inv| serialize_invitation(inv) } : [],
         stats: {
-          total_members: @memberships.count,
+          total_members: total_members,
           pending_count: @pending_invitations&.count || 0,
-          active_count: @memberships.accepted.count
+          active_count: active_count
         }
       }
     }
@@ -96,18 +128,24 @@ class Api::V1::CompanyMembershipsController < ApplicationController
   private
   
   def set_company
+    # Get all companies accessible to the user (owned + memberships), including owner relationship
+    accessible_companies = Company.includes(:owner).where(
+      'owner_id = ? OR id IN (SELECT company_id FROM company_memberships WHERE user_id = ?)', 
+      current_user.id, current_user.id
+    )
+    
     if params[:company_id]
-      @company = current_user.companies.find(params[:company_id])
+      @company = accessible_companies.find_by(id: params[:company_id])
+      unless @company
+        render json: {
+          success: false,
+          error: 'Company not found or access denied'
+        }, status: :not_found
+      end
     else
       # If no company_id provided, use the first company the user has access to
-      @company = current_user.companies.first
-    end
-    
-    unless @company
-      render json: {
-        success: false,
-        error: 'Company not found or access denied'
-      }, status: :not_found
+      @company = accessible_companies.first
+      # For index action, we'll handle no company gracefully in the action itself
     end
   rescue ActiveRecord::RecordNotFound
     render json: {
@@ -196,6 +234,33 @@ class Api::V1::CompanyMembershipsController < ApplicationController
       invited_at: invitation.created_at.iso8601,
       expires_at: invitation.expires_at&.iso8601,
       status: 'pending'
+    }
+  end
+  
+  def serialize_owner_as_membership(company)
+    return nil unless company.owner
+    
+    {
+      id: "owner-#{company.owner.id}",
+      role: 'owner',
+      accepted: true,
+      accepted_at: company.created_at.iso8601,
+      created_at: company.created_at.iso8601,
+      user: {
+        id: company.owner.id,
+        email: company.owner.email,
+        full_name: company.owner.full_name,
+        first_name: company.owner.first_name,
+        last_name: company.owner.last_name,
+        last_sign_in_at: company.owner.last_sign_in_at&.iso8601,
+        sign_in_count: company.owner.sign_in_count || 0,
+        confirmed: company.owner.confirmed_at.present?,
+        locked: company.owner.locked_at.present?
+      },
+      company: {
+        id: company.id,
+        name: company.name
+      }
     }
   end
 end
