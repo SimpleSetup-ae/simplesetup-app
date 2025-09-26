@@ -10,13 +10,20 @@ export const FREE_ZONES = {
 } as const
 
 export const COMPANY_STATUSES = {
+  ANONYMOUS_DRAFT: 'anonymous_draft',
   DRAFT: 'draft',
+  STARTED: 'started',
   IN_PROGRESS: 'in_progress',
+  SUBMITTED: 'submitted',
+  UNDER_REVIEW: 'under_review',
+  INFORMATION_REQUIRED: 'information_required',
   PENDING_PAYMENT: 'pending_payment',
   PROCESSING: 'processing',
   APPROVED: 'approved',
   REJECTED: 'rejected',
-  ISSUED: 'issued'
+  ISSUED: 'issued',
+  FORMED: 'formed',
+  ACTIVE: 'active'
 } as const
 
 export const WORKFLOW_TYPES = {

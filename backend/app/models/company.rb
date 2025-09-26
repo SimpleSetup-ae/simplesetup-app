@@ -20,7 +20,7 @@ class Company < ApplicationRecord
   
   # Updated status values to include new application flow statuses
   STATUSES = %w[
-    anonymous_draft draft in_progress submitted under_review 
+    anonymous_draft draft started in_progress submitted under_review 
     information_required pending_payment processing approved 
     rejected issued formed active
   ].freeze
@@ -38,6 +38,7 @@ class Company < ApplicationRecord
   enum status: {
     anonymous_draft: 'anonymous_draft',
     draft: 'draft',
+    started: 'started',
     in_progress: 'in_progress',
     submitted: 'submitted',
     under_review: 'under_review',
@@ -56,7 +57,7 @@ class Company < ApplicationRecord
   scope :by_formation_step, ->(step) { where(formation_step: step) }
   scope :with_auto_save_data, -> { where.not(auto_save_data: {}) }
   scope :anonymous_drafts, -> { where(status: 'anonymous_draft') }
-  scope :admin_viewable, -> { where(status: ['submitted', 'under_review', 'information_required', 'processing', 'approved', 'formed', 'active']) }
+  scope :admin_viewable, -> { where(status: ['started', 'submitted', 'under_review', 'information_required', 'processing', 'approved', 'formed', 'active']) }
   
   after_create :create_billing_account, unless: :anonymous_draft?
   after_create :start_formation_workflow, unless: :anonymous_draft?
@@ -164,6 +165,23 @@ class Company < ApplicationRecord
 
   def form_config_service
     @form_config_service ||= CompanyFormation::ConfigService.new(freezone_config || free_zone)
+  end
+  
+  # Tax calendar helper methods
+  def incorporation_date
+    # Use formed_at if available, otherwise created_at as fallback
+    formed_at&.to_date || created_at&.to_date
+  end
+  
+  def licence_issue_date
+    # Use formed_at as the license issue date
+    formed_at&.to_date
+  end
+  
+  def financial_year_end
+    # Default to December 31st of previous year for testing
+    # This ensures we get upcoming CT return deadlines
+    Date.new(Date.current.year - 1, 12, 31)
   end
   
   private

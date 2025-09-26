@@ -1,9 +1,23 @@
 class Api::V1::TaxRegistrationsController < ApplicationController
-  before_action :set_company, only: [:index, :create]
+  before_action :set_company, only: [:index, :create, :tax_calendar]
   before_action :set_tax_registration, only: [:show, :update, :destroy, :apply, :approve, :reject]
   before_action :authorize_tax_access
   
   def index
+    # Handle case when user has no companies
+    unless @company
+      return render json: {
+        success: true,
+        data: [],
+        stats: {
+          total: 0,
+          active: 0,
+          pending: 0,
+          overdue_filings: 0
+        }
+      }
+    end
+    
     @tax_registrations = @company.tax_registrations.order(created_at: :desc)
     
     render json: {
@@ -121,21 +135,65 @@ class Api::V1::TaxRegistrationsController < ApplicationController
     }
   end
   
+  def tax_calendar
+    # Handle case when user has no companies
+    unless @company
+      return render json: {
+        success: true,
+        data: [],
+        message: 'No companies found for tax calendar'
+      }
+    end
+    
+    begin
+      months_ahead = params[:months_ahead]&.to_i || 12
+      months_ahead = [months_ahead, 24].min # Cap at 24 months
+      
+      tax_calendar_service = TaxCalendarService.new(@company)
+      calendar_events = tax_calendar_service.generate_tax_calendar(months_ahead: months_ahead)
+      
+      render json: {
+        success: true,
+        data: calendar_events,
+        company: {
+          id: @company.id,
+          name: @company.name,
+          incorporation_date: @company.incorporation_date&.iso8601,
+          licence_issue_date: @company.licence_issue_date&.iso8601
+        },
+        generated_at: Time.current.iso8601
+      }
+    rescue => e
+      Rails.logger.error "Tax calendar generation failed for company #{@company.id}: #{e.message}"
+      render json: {
+        success: false,
+        error: 'Failed to generate tax calendar',
+        message: e.message
+      }, status: :internal_server_error
+    end
+  end
+  
   private
   
   def set_company
+    # Get all companies accessible to the user (owned + memberships)
+    accessible_companies = Company.where(
+      'owner_id = ? OR id IN (SELECT company_id FROM company_memberships WHERE user_id = ?)', 
+      current_user.id, current_user.id
+    )
+    
     if params[:company_id]
-      @company = current_user.companies.find(params[:company_id])
+      @company = accessible_companies.find_by(id: params[:company_id])
+      unless @company
+        render json: {
+          success: false,
+          error: 'Company not found or access denied'
+        }, status: :not_found
+      end
     else
       # If no company_id provided, use the first company the user has access to
-      @company = current_user.companies.first
-    end
-    
-    unless @company
-      render json: {
-        success: false,
-        error: 'Company not found or access denied'
-      }, status: :not_found
+      @company = accessible_companies.first
+      # For index action, we'll handle no company gracefully in the action itself
     end
   rescue ActiveRecord::RecordNotFound
     render json: {

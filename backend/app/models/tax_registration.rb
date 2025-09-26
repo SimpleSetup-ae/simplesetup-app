@@ -72,7 +72,7 @@ class TaxRegistration < ApplicationRecord
   end
   
   def can_file_return?
-    active? && next_filing_date && next_filing_date <= Date.current
+    active? && next_filing_date.present? && next_filing_date <= Date.current
   end
   
   def is_overdue?

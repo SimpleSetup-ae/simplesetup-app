@@ -31,6 +31,21 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   
   useEffect(() => {
     updateProgress(7, 'review')
+    
+    // Mark application as started when user reaches review page
+    const markAsStarted = async () => {
+      try {
+        await fetch(`http://localhost:3001/api/v1/applications/${params.id}/mark_started`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      } catch (error) {
+        console.error('Failed to mark application as started:', error)
+      }
+    }
+    
+    markAsStarted()
   }, [])
   
   // Validate sections

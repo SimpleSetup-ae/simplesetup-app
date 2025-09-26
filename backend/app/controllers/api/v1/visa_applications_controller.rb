@@ -4,6 +4,21 @@ class Api::V1::VisaApplicationsController < ApplicationController
   
   def index
     @visa_applications = current_user_visa_applications
+    
+    # Handle case when user has no companies or visa applications
+    if @visa_applications.nil? || @visa_applications.empty?
+      return render json: {
+        success: true,
+        data: [],
+        pagination: {
+          current_page: 1,
+          total_pages: 0,
+          total_count: 0,
+          per_page: params[:per_page] || 20
+        }
+      }
+    end
+    
     @visa_applications = @visa_applications.includes(:company, :person)
                                           .order(created_at: :desc)
                                           .page(params[:page])
@@ -24,7 +39,20 @@ class Api::V1::VisaApplicationsController < ApplicationController
   end
   
   def create
-    @company = current_user.companies.find(params[:company_id])
+    # Get all companies accessible to the user (owned + memberships)
+    accessible_companies = Company.where(
+      'owner_id = ? OR id IN (SELECT company_id FROM company_memberships WHERE user_id = ?)', 
+      current_user.id, current_user.id
+    )
+    
+    @company = accessible_companies.find_by(id: params[:company_id])
+    unless @company
+      return render json: {
+        success: false,
+        error: 'Company not found or access denied'
+      }, status: :not_found
+    end
+    
     @person = @company.people.find(params[:person_id])
     
     @visa_application = @company.visa_applications.build(visa_application_params)
@@ -90,8 +118,12 @@ class Api::V1::VisaApplicationsController < ApplicationController
   end
   
   def current_user_visa_applications
-    # Get all visa applications for companies the user has access to
-    company_ids = current_user.companies.pluck(:id)
+    # Get all visa applications for companies the user has access to (owned + memberships)
+    accessible_companies = Company.where(
+      'owner_id = ? OR id IN (SELECT company_id FROM company_memberships WHERE user_id = ?)', 
+      current_user.id, current_user.id
+    )
+    company_ids = accessible_companies.pluck(:id)
     VisaApplication.joins(:company).where(company_id: company_ids)
   end
   

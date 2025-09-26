@@ -53,6 +53,7 @@ interface DetailedApplication extends Application {
 
 interface ApplicationStats {
   total: number
+  started: number
   submitted: number
   underReview: number
   approved: number
@@ -62,6 +63,7 @@ interface ApplicationStats {
 const statusConfig = {
   'anonymous_draft': { label: 'Anonymous Draft', color: 'bg-gray-100 text-gray-800', icon: FileText },
   'draft': { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: FileText },
+  'started': { label: 'Started', color: 'bg-blue-100 text-blue-800', icon: Clock },
   'in_progress': { label: 'In Progress', color: 'bg-blue-100 text-blue-800', icon: Clock },
   'submitted': { label: 'Submitted', color: 'bg-yellow-100 text-yellow-800', icon: FileText },
   'under_review': { label: 'Under Review', color: 'bg-orange-100 text-orange-800', icon: Clock },
@@ -77,7 +79,7 @@ const statusConfig = {
 
 export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([])
-  const [stats, setStats] = useState<ApplicationStats>({ total: 0, submitted: 0, underReview: 0, approved: 0, rejected: 0 })
+  const [stats, setStats] = useState<ApplicationStats>({ total: 0, started: 0, submitted: 0, underReview: 0, approved: 0, rejected: 0 })
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -112,6 +114,7 @@ export default function AdminApplicationsPage() {
         // Calculate stats from real data
         const stats = {
           total: data.applications.length,
+          started: data.applications.filter((app: Application) => app.status === 'started').length,
           submitted: data.applications.filter((app: Application) => app.status === 'submitted').length,
           underReview: data.applications.filter((app: Application) => app.status === 'under_review').length,
           approved: data.applications.filter((app: Application) => ['approved', 'formed', 'active'].includes(app.status)).length,
@@ -125,7 +128,7 @@ export default function AdminApplicationsPage() {
       console.error('Error fetching applications:', error)
       // Set empty state on error
       setApplications([])
-      setStats({ total: 0, submitted: 0, underReview: 0, approved: 0, rejected: 0 })
+      setStats({ total: 0, started: 0, submitted: 0, underReview: 0, approved: 0, rejected: 0 })
     } finally {
       setLoading(false)
     }
@@ -202,8 +205,8 @@ export default function AdminApplicationsPage() {
     return (
       <DashboardLayout title="Applications" description="Manage all company formation applications">
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-lg"></div>
             ))}
           </div>
@@ -217,7 +220,7 @@ export default function AdminApplicationsPage() {
     <DashboardLayout title="Applications" description="Manage all company formation applications">
       <div className="space-y-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
@@ -225,6 +228,16 @@ export default function AdminApplicationsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Started</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.started}</div>
             </CardContent>
           </Card>
 
@@ -290,6 +303,7 @@ export default function AdminApplicationsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="started">Started</SelectItem>
                   <SelectItem value="submitted">Submitted</SelectItem>
                   <SelectItem value="under_review">Under Review</SelectItem>
                   <SelectItem value="information_required">Info Required</SelectItem>
