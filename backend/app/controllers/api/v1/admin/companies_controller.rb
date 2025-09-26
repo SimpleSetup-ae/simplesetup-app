@@ -1,10 +1,10 @@
-class Api::V1::Admin::CompaniesController < Api::V1::BaseController
+class Api::V1::Admin::CompaniesController < ApplicationController
   before_action :require_admin
-  before_action :set_company, only: [:show, :update]
+  before_action :set_company, only: [:show]
   
   # GET /api/v1/admin/companies
   def index
-    @companies = Company.where(status: ['formed', 'active', 'issued'])
+    @companies = Company.where(status: ['approved', 'formed', 'active', 'issued'])
                         .includes(:owner, :shareholders, :directors, :documents)
                         .order(created_at: :desc)
     
@@ -43,15 +43,18 @@ class Api::V1::Admin::CompaniesController < Api::V1::BaseController
   end
   
   def require_admin
-    unless current_user&.admin?
+    unless current_user&.is_admin?
       render json: { error: 'Admin access required' }, status: :forbidden
     end
   end
   
   def serialize_admin_company(company)
+    # Use the first choice company name from name_options if available, otherwise fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
     {
       id: company.id,
-      name: company.name,
+      name: first_choice_name,
       tradeName: company.trade_name,
       licenseNumber: company.license_number,
       freeZone: company.free_zone,
@@ -106,12 +109,13 @@ class Api::V1::Admin::CompaniesController < Api::V1::BaseController
   end
   
   def calculate_company_stats
-    all_companies = Company.where(status: ['formed', 'active', 'issued'])
+    all_companies = Company.where(status: ['approved', 'formed', 'active', 'issued'])
     now = Date.current
     three_months_from_now = now + 3.months
     
     {
       total: all_companies.count,
+      approved: all_companies.where(status: 'approved').count,
       active: all_companies.where(status: 'active').count,
       formed: all_companies.where(status: 'formed').count,
       issued: all_companies.where(status: 'issued').count,

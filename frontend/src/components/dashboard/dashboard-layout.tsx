@@ -4,7 +4,7 @@ import { ReactNode } from 'react'
 import Sidebar from './sidebar'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Plus, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -34,18 +34,6 @@ export default function DashboardLayout({ children, title = "Dashboard", descrip
             
             <div className="flex items-center gap-4">
               {/* Quick Actions */}
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2"
-                asChild
-              >
-                <Link href="/companies/new">
-                  <Plus className="h-4 w-4" />
-                  New Company
-                </Link>
-              </Button>
-              
               <Button 
                 variant="outline"
                 size="sm"

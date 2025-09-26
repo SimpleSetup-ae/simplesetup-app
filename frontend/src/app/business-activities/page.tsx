@@ -13,11 +13,15 @@ import Link from 'next/link'
 // Use API for real data
 
 interface BusinessActivity {
-  id: number;
+  id: string;
   activity_code: string;
   activity_name: string;
   activity_description: string;
   activity_type: string;
+  regulation_type?: string;
+  freezone?: string;
+  notes?: string;
+  property_requirements?: string;
 }
 
 export default function BusinessActivitiesPage() {
@@ -127,7 +131,7 @@ export default function BusinessActivitiesPage() {
                   <Logo />
                 </Link>
                 <div>
-                  <h1 className="text-2xl font-bold gradient-text">Business Activities Directory</h1>
+                  <h1 className="font-lora text-2xl font-bold gradient-text">Business Activities Directory</h1>
                   <p className="text-muted-foreground">Complete list of available business activities for UAE company formation</p>
                 </div>
               </div>
@@ -220,11 +224,11 @@ export default function BusinessActivitiesPage() {
               <table className="w-full">
                 <thead className="bg-muted/20">
                   <tr>
-                    <th className="text-left p-4 font-semibold">Activity Code</th>
-                    <th className="text-left p-4 font-semibold">Activity Name</th>
-                    <th className="text-left p-4 font-semibold">Description</th>
-                    <th className="text-left p-4 font-semibold">Type</th>
-                    <th className="text-left p-4 font-semibold">Regulation</th>
+                    <th className="text-left p-4 font-lora font-semibold">Activity Code</th>
+                    <th className="text-left p-4 font-lora font-semibold">Activity Name</th>
+                    <th className="text-left p-4 font-lora font-semibold">Description</th>
+                    <th className="text-left p-4 font-lora font-semibold">Type</th>
+                    <th className="text-left p-4 font-lora font-semibold">Regulation</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -282,7 +286,7 @@ export default function BusinessActivitiesPage() {
           {/* Call to Action */}
           <div className="mt-8 text-center">
             <Card className="p-8 gradient-card border-0 shadow-lg">
-              <h2 className="text-2xl font-bold gradient-text mb-4">Ready to Start Your Business?</h2>
+              <h2 className="font-lora text-2xl font-bold gradient-text mb-4">Ready to Start Your Business?</h2>
               <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
                 Our streamlined process makes UAE company formation simple and transparent. 
                 Get started today with our guided application form.

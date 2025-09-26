@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApplication } from '@/contexts/ApplicationContext'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { StandardFormLayout } from '@/components/application/StandardFormLayout'
+import { FormSection } from '@/components/application/FormSection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -142,19 +143,17 @@ export default function ShareholdingPage({ params }: { params: { id: string } })
   }
   
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Share Capital & Ownership Structure</CardTitle>
-                <CardDescription>
-                  Define your company's shareholding structure and capital requirements
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+    <StandardFormLayout
+      title="Share Capital & Ownership Structure"
+      subtitle="Define your company's shareholding structure and capital requirements"
+      onBack={() => router.push(`/application/${params.id}/activities`)}
+      onContinue={validateAndContinue}
+      errors={errors}
+    >
+      <FormSection
+        title="Share Capital Configuration"
+        description="Set your company's share capital and structure"
+      >
                 {/* Shareholding Type */}
                 <div className="space-y-3">
                   <Label>Shareholding Type</Label>
@@ -356,40 +355,7 @@ export default function ShareholdingPage({ params }: { params: { id: string } })
                   </AlertDescription>
                 </Alert>
                 
-                {/* Errors */}
-                {errors.length > 0 && (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      <ul className="list-disc pl-4">
-                        {errors.map((error, index) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {/* Navigation */}
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button onClick={validateAndContinue}>
-                    Continue
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Pricing Banner */}
-          <div className="lg:col-span-1">
-            <PricingBanner />
-          </div>
-        </div>
-      </div>
-    </div>
+      </FormSection>
+    </StandardFormLayout>
   )
 }

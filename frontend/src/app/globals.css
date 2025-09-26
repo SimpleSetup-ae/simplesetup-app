@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 @layer base {
   :root {
     /* Brand Colors */
@@ -14,22 +23,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 12 6% 6%;
     
-    /* Primary Brand - Warm Orange */
-    --primary: 21 100% 55%;
+    /* Primary Brand - Bright Orange (hsl(20 100% 54%)) */
+    --primary: 20 100% 54%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 21 95% 65%;
-    
-    /* Secondary - Soft Orange Tint */
-    --secondary: 21 20% 96%;
-    --secondary-foreground: 12 6% 6%;
-    
-    /* Accent - Deep Orange */
+
+    /* Secondary - Light orange backgrounds */
+    --secondary: 20 30% 96%;
+    --secondary-foreground: 20 100% 20%;
+
+    /* Accent - Orange for highlights */
     --accent: 20 100% 54%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 20 95% 65%;
-    
+
     /* Logo Brand Color */
-    --logo-brand: 21 100% 55%;
+    --logo-brand: 20 100% 54%;
+
+    /* Success - Green for confirmations */
+    --success: 142 69% 58%;
+    --success-foreground: 0 0% 100%;
     
     /* Neutral Colors */
     --muted: 210 40% 96%;
@@ -56,11 +67,12 @@
     
     --radius: 0.75rem;
     
-    /* Custom Simple Setup design system variables */
-    --gradient-text: linear-gradient(135deg, #000000 0%, #C0C0C0 100%);
-    --gradient-button: linear-gradient(135deg, #FF6B35 0%, #FFA500 100%);
-    --gradient-card: linear-gradient(135deg, #FFFFFF 0%, #FFF7F0 100%);
-    --gradient-background: linear-gradient(135deg, #FFFFFF 0%, #FFF9F5 50%, #FFF2E8 100%);
+    /* Simple Setup Brand Design System */
+    --brand-gradient-text: linear-gradient(135deg, hsl(20 100% 54%) 0%, hsl(20 100% 68%) 100%);
+    --brand-gradient-button: linear-gradient(135deg, hsl(20 100% 54%) 0%, hsl(20 100% 68%) 100%);
+    --brand-gradient-card: linear-gradient(135deg, #FFFFFF 0%, hsl(20 30% 96%) 100%);
+    --brand-gradient-background: linear-gradient(135deg, #FFFFFF 0%, hsl(20 20% 98%) 50%, hsl(20 30% 96%) 100%);
+    --brand-gradient-step: linear-gradient(135deg, hsl(20 100% 54%) 0%, hsl(20 100% 68%) 100%);
   }
 
   .dark {
@@ -101,23 +113,57 @@
 }
 
 @layer utilities {
-  .gradient-text {
-    background: var(--gradient-text);
+  /* Brand Text Gradients */
+  .brand-gradient-text {
+    background: var(--brand-gradient-text);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  
-  .gradient-button {
-    background: var(--gradient-button);
+
+  /* Brand Interactive Elements */
+  .brand-gradient-button {
+    background: var(--brand-gradient-button);
+    color: white;
+    border: none;
+    transition: all 0.2s ease;
   }
-  
-  .gradient-card {
-    background: var(--gradient-card);
+
+  .brand-gradient-button:hover {
+    background: var(--brand-gradient-button);
+    opacity: 0.9;
+    transform: translateY(-1px);
   }
-  
-  .gradient-background {
-    background: var(--gradient-background);
+
+  /* Brand Layout Elements */
+  .brand-gradient-card {
+    background: var(--brand-gradient-card);
+  }
+
+  .brand-gradient-background {
+    background: var(--brand-gradient-background);
+  }
+
+  /* Brand Step Indicators */
+  .brand-step-number {
+    background: var(--brand-gradient-step);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 900;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Brand Selection States */
+  .brand-selection {
+    border: 2px solid hsl(20 100% 54%);
+    background: hsl(20 30% 96%);
+    box-shadow: 0 0 0 3px hsl(20 100% 54% / 0.1);
+  }
+
+  .brand-focus {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(20 100% 54% / 0.2);
   }
   
   .animate-fade-in {

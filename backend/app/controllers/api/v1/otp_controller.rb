@@ -1,5 +1,6 @@
 class Api::V1::OtpController < Api::V1::BaseController
   skip_before_action :authenticate_user!
+  skip_jwt_auth :authenticate, :check_user, :register, :send_otp, :verify_otp, :resend_otp
 
   # POST /api/v1/auth/authenticate (Unified authentication endpoint)
   def authenticate

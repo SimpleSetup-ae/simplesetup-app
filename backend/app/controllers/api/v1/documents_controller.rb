@@ -1,5 +1,6 @@
 class Api::V1::DocumentsController < Api::V1::BaseController
   skip_before_action :authenticate_user!, only: [:upload, :extract_passport]
+  skip_jwt_auth :upload, :extract_passport
   before_action :set_company
   before_action :set_document, only: [:show, :destroy]
   
@@ -79,7 +80,18 @@ class Api::V1::DocumentsController < Api::V1::BaseController
     # Get file URL
     if params[:document_id]
       document = @company.documents.find(params[:document_id])
-      file_url = SupabaseStorageService.get_public_url(document.storage_path)
+      file_metadata = {
+        file_name: document.file_name,
+        file_size: document.file_size,
+        content_type: document.content_type,
+        storage_path: document.storage_path,
+        storage_bucket: document.storage_bucket.presence || 'documents'
+      }
+      file_url = SupabaseStorageService.get_signed_url(
+        file_metadata[:storage_path],
+        bucket: file_metadata[:storage_bucket],
+        expires_in: 300
+      )
       Rails.logger.info "[DocumentsController] Using existing document: #{document.id}"
     else
       # Upload temp file and get URL
@@ -91,10 +103,36 @@ class Api::V1::DocumentsController < Api::V1::BaseController
         path: temp_path,
         bucket: 'documents'
       )
-      file_url = upload_result[:url]
+      unless upload_result[:success]
+        Rails.logger.error "[DocumentsController] Upload to Supabase failed: #{upload_result[:error]}"
+        render json: {
+          success: false,
+          message: 'Failed to upload file to storage'
+        }, status: :unprocessable_entity and return
+      end
+      file_url = SupabaseStorageService.get_signed_url(
+        upload_result[:path],
+        bucket: 'documents',
+        expires_in: 300
+      )
+      file_metadata = {
+        file_name: file.original_filename,
+        file_size: file.size,
+        content_type: file.content_type,
+        storage_path: upload_result[:path],
+        storage_bucket: 'documents'
+      }
       Rails.logger.info "[DocumentsController] File uploaded to: #{file_url}"
     end
     
+    unless file_url.present?
+      Rails.logger.error "[DocumentsController] Failed to obtain signed URL for extraction"
+      render json: {
+        success: false,
+        message: 'Unable to access uploaded file for extraction'
+      }, status: :unprocessable_entity and return
+    end
+
     # Extract using AI services
     begin
       Rails.logger.info "[DocumentsController] Starting passport extraction..."
@@ -102,6 +140,27 @@ class Api::V1::DocumentsController < Api::V1::BaseController
       Rails.logger.info "[DocumentsController] Extraction result: #{extraction_result[:success] ? 'Success' : 'Failed'}"
       
       if extraction_result[:success]
+        passport_document = document
+
+        unless passport_document
+          passport_document = @company.documents.create!(
+            document_type: 'passport',
+            document_category: 'identity',
+            name: file_metadata[:file_name],
+            file_name: file_metadata[:file_name],
+            file_size: file_metadata[:file_size],
+            content_type: file_metadata[:content_type],
+            person_id: params[:person_id],
+            uploaded_at: Time.current,
+            storage_path: file_metadata[:storage_path],
+            storage_bucket: file_metadata[:storage_bucket],
+            ocr_status: 'completed',
+            confidence_score: extraction_result[:confidence],
+            extracted_data: extraction_result[:data],
+            ocr_completed_at: Time.current
+          )
+        end
+        
         # Store extraction results if document exists
         if document
           document.update!(
@@ -109,6 +168,10 @@ class Api::V1::DocumentsController < Api::V1::BaseController
             ocr_completed_at: Time.current,
             extracted_data: extraction_result[:data],
             confidence_score: extraction_result[:confidence]
+          )
+        else
+          passport_document.update!(
+            extracted_data: extraction_result[:data]
           )
         end
         

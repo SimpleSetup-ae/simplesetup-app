@@ -100,7 +100,9 @@ class SupabaseStorageService
       
       if response.code == '200'
         result = JSON.parse(response.body)
-        "#{supabase_url}#{result['signedURL']}"
+        signed_path = result['signedURL']
+        signed_path = "/storage/v1#{signed_path}" unless signed_path.start_with?('/storage/v1')
+        "#{supabase_url}#{signed_path}"
       else
         Rails.logger.error "Failed to get signed URL: #{response.body}"
         nil

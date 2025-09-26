@@ -6,7 +6,6 @@ export async function middleware(request: NextRequest) {
   
   // Define protected routes
   const protectedRoutes = [
-    '/dashboard',
     '/companies',
     '/company-formation',
     '/documents',
@@ -24,7 +23,8 @@ export async function middleware(request: NextRequest) {
     '/sign-in',
     '/sign-up',
     '/demo-form',
-    '/business-activities'
+    '/business-activities',
+    '/application'
   ]
   
   // Allow public routes

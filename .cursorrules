@@ -1,11 +1,11 @@
 ---
-description: "Shadcn + Rails + Supabase + Clerk development rules with pre-implementation audit"
+description: "Shadcn + Rails + Supabase + Authentication (JWT/Devise) development rules with pre-implementation audit"
 globs:
   - "**/*"
 ---
 
 # DEVELOPMENT RULES
-# Tech Stack: shadcn/ui Frontend + Ruby on Rails API + Supabase DB + Clerk Auth + Heroku
+# Tech Stack: shadcn/ui Frontend + Ruby on Rails API + Supabase DB + Authentication (JWT/Devise) + Heroku
 
 ## 1. MANDATORY PRE-IMPLEMENTATION AUDIT
 
@@ -15,7 +15,7 @@ globs:
    - **Frontend**: shadcn/ui components, React hooks, utility functions
    - **Backend**: Rails controllers, models, services, serializers
    - **Database**: Supabase tables, RLS policies, functions, triggers
-   - **Auth**: Clerk webhooks, user management, role-based access
+   - **Auth**: Authentication integration points, user management, role-based access
    - **API**: Rails routes, API endpoints, middleware
    - **Deployment**: Heroku configs, Procfile, buildpacks
    - **Shared**: Types/interfaces, constants, validation schemas
@@ -26,7 +26,7 @@ globs:
    - **shadcn/ui components to reuse**: 
    - **Rails patterns to follow**: 
    - **Supabase schema dependencies**: 
-   - **Clerk auth integration points**: 
+   - **Authentication integration points**: 
    - **Heroku deployment considerations**: 
    - **Environment variables needed**: 
    - **Database migrations required**: 
@@ -55,7 +55,7 @@ git checkout -b feature/user-authentication
 # 2. Work on feature with regular commits
 git add .
 git commit -m "feat: add user authentication form"
-git commit -m "feat: integrate Clerk auth with Rails API"
+git commit -m "feat: integrate JWT auth with Rails API"
 git commit -m "test: add authentication integration tests"
 
 # 3. Push feature branch to GitHub
@@ -114,13 +114,8 @@ SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_KEY=your-service-key
 DATABASE_URL=postgresql://postgres:[password]@db.[project].supabase.co:5432/postgres
 
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/onboarding
+# Authentication
+# See env.template for DEVISE_SECRET_KEY and any JWT-related keys
 
 # Rails API
 RAILS_ENV=development
@@ -201,14 +196,14 @@ FEATURE_NEW_UI=true
 gem 'rails', '~> 7.0'
 gem 'pg' # for Supabase PostgreSQL
 gem 'rack-cors'
-gem 'clerk-sdk-ruby'
+gem 'devise'
 ```
 
 **Development workflow:**
 1. **Frontend**: `npm install && npm run dev` (port 3000)
 2. **Backend**: `bundle install && rails server` (port 3001)
 3. **Database**: Supabase handles hosting, use migrations for schema
-4. **Auth**: Clerk webhooks for user sync to Rails
+4. **Auth**: JWT/Devise session management and authorization
 5. **Deploy**: Use Heroku CLI for Rails API deployment
 
 ## 6. TECH STACK SPECIFIC PATTERNS
@@ -226,7 +221,7 @@ gem 'clerk-sdk-ruby'
 - Models with proper validations and associations
 - Services in `app/services/` for business logic
 - Serializers in `app/serializers/` for JSON responses
-- Middleware for CORS and Clerk auth verification
+- Middleware for CORS and auth verification
 
 **Database (Supabase):**
 - Use Rails migrations for schema changes
@@ -234,10 +229,9 @@ gem 'clerk-sdk-ruby'
 - Leverage Supabase functions for complex queries
 - Use proper indexes for performance
 
-**Authentication (Clerk):**
-- Protect API routes with Clerk middleware
-- Sync user data via webhooks to Rails
-- Use Clerk's `useUser()` hook in frontend
+**Authentication (JWT/Devise):**
+- Protect API routes with server-side auth (JWT/Devise)
+- Verify JWTs on backend; maintain secure session cookies if applicable
 - Implement role-based access control
 
 ## 7. DATABASE & SUPABASE INTEGRATION
@@ -249,8 +243,8 @@ gem 'clerk-sdk-ruby'
 - Always create reversible migrations with `up` and `down`
 
 **Supabase Specific:**
-- Enable RLS on all tables: `ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;`
-- Create policies for user access control
+- Enable RLS on all user-facing tables
+- Create policies based on application user ID
 - Use Supabase functions for complex business logic
 - Leverage real-time subscriptions where needed
 - Store files in Supabase Storage with proper bucket policies
@@ -261,23 +255,17 @@ gem 'clerk-sdk-ruby'
 - Add proper foreign key constraints
 - Consider partitioning for large tables
 
-## 8. SECURITY & CLERK INTEGRATION
-
-**Clerk Authentication:**
-- Frontend: Use `@clerk/nextjs` middleware
-- Backend: Verify JWT tokens with `clerk-sdk-ruby`
-- Implement webhook endpoints for user sync
-- Use Clerk's user metadata for roles/permissions
+## 8. SECURITY & AUTHENTICATION
 
 **API Security:**
-- Validate Clerk tokens on all protected routes
+- Validate JWT tokens on all protected routes (backend)
 - Implement CORS properly for frontend domain
 - Use Rails strong parameters for input validation
 - Apply rate limiting on API endpoints
 
 **Supabase Security:**
 - Enable RLS on all user-facing tables
-- Create policies based on Clerk user ID
+- Create policies based on application user ID
 - Use service key only in backend, never frontend
 - Implement proper bucket policies for file uploads
 
@@ -324,7 +312,7 @@ heroku ps -a simplesetup-app
 - [ ] Frontend builds successfully (`npm run build`)
 - [ ] Rails tests passing (`rails test`)
 - [ ] Supabase migrations applied
-- [ ] Clerk webhooks configured
+- [ ] Auth configuration validated
 - [ ] Heroku config vars set
 - [ ] CORS origins updated for production
 - [ ] Error tracking configured (Sentry/Rollbar)
@@ -332,7 +320,6 @@ heroku ps -a simplesetup-app
 **Production Monitoring:**
 - Use Heroku metrics for Rails API performance
 - Monitor Supabase dashboard for database performance
-- Set up Clerk webhook monitoring
 - Implement health check endpoints
 - Use structured logging with Rails logger
 - Monitor API response times and error rates

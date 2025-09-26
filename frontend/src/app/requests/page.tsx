@@ -1,59 +1,79 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Sidebar from '@/components/dashboard/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Plus, Users, Building2 } from 'lucide-react'
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, Plus, Users, Building2, Loader2 } from 'lucide-react'
+import { apiGet } from '@/lib/api'
+
+interface Request {
+  id: string
+  request_type: string
+  title: string
+  description: string
+  status: string
+  fee_amount: number
+  fee_currency: string
+  fee_display: string
+  submitted_at: string
+  processed_at?: string
+  completed_at?: string
+  processing_time_days?: number
+  company: {
+    id: string
+    name: string
+    free_zone: string
+  }
+  requested_by: {
+    id: string
+    name: string
+    email: string
+  }
+}
 
 export default function RequestsPage() {
-  // Mock requests data
-  const requests = [
-    {
-      id: '1',
-      request_type: 'name_change',
-      title: 'Change Company Name',
-      description: 'Update company name from Sample Tech to Advanced Tech Solutions',
-      status: 'under_review',
-      fee_amount: 1500,
-      fee_currency: 'AED',
-      submitted_at: '2024-01-10T10:00:00Z',
-      company: 'Sample Tech Solutions LLC',
-      processing_time_days: 7
-    },
-    {
-      id: '2',
-      request_type: 'shareholder_change',
-      title: 'Add New Shareholder',
-      description: 'Add Jane Smith as 25% shareholder',
-      status: 'approved',
-      fee_amount: 2000,
-      fee_currency: 'AED',
-      submitted_at: '2024-01-05T10:00:00Z',
-      processed_at: '2024-01-08T14:30:00Z',
-      company: 'Digital Marketing Co.',
-      processing_time_days: 3
-    },
-    {
-      id: '3',
-      request_type: 'noc_letter',
-      title: 'NOC for Bank Account Opening',
-      description: 'No Objection Certificate for opening corporate bank account',
-      status: 'completed',
-      fee_amount: 500,
-      fee_currency: 'AED',
-      submitted_at: '2024-01-01T10:00:00Z',
-      completed_at: '2024-01-02T16:00:00Z',
-      company: 'Sample Tech Solutions LLC',
-      processing_time_days: 1
+  const [requests, setRequests] = useState<Request[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchRequests()
+  }, [])
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiGet('/requests')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch requests')
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setRequests(data.data || [])
+      } else {
+        throw new Error(data.error || 'Failed to fetch requests')
+      }
+    } catch (err) {
+      console.error('Error fetching requests:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch requests')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-gray-100 text-gray-800'
-      case 'under_review': return 'bg-blue-100 text-blue-800'
-      case 'approved': return 'bg-green-100 text-green-800'
-      case 'rejected': return 'bg-red-100 text-red-800'
+      case 'in_progress': return 'bg-blue-100 text-blue-800'
       case 'completed': return 'bg-green-100 text-green-800'
+      case 'rejected': return 'bg-red-100 text-red-800'
+      case 'cancelled': return 'bg-gray-100 text-gray-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -114,7 +134,7 @@ export default function RequestsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-blue-600">
-                      {requests.filter(r => r.status === 'under_review').length}
+                      {requests.filter(r => ['pending', 'in_progress'].includes(r.status)).length}
                     </div>
                   </CardContent>
                 </Card>
@@ -126,7 +146,7 @@ export default function RequestsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {requests.filter(r => ['approved', 'completed'].includes(r.status)).length}
+                      {requests.filter(r => r.status === 'completed').length}
                     </div>
                   </CardContent>
                 </Card>
@@ -161,59 +181,82 @@ export default function RequestsPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {requests.map((request) => (
-                      <div key={request.id} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-1">
-                              {getRequestTypeIcon(request.request_type)}
-                            </div>
-                            <div>
-                              <h4 className="font-semibold">{request.title}</h4>
-                              <p className="text-sm text-gray-600 mb-1">{request.description}</p>
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
-                                <span>{getRequestTypeLabel(request.request_type)}</span>
-                                <span>•</span>
-                                <span>{request.company}</span>
-                                <span>•</span>
-                                <span>{request.fee_amount} {request.fee_currency}</span>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      <span>Loading requests...</span>
+                    </div>
+                  ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <AlertCircle className="h-8 w-8 text-red-500 mb-2" />
+                      <p className="text-red-600 mb-4">{error}</p>
+                      <Button onClick={fetchRequests} variant="outline">
+                        Try Again
+                      </Button>
+                    </div>
+                  ) : requests.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <FileText className="h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-gray-600 mb-4">No amendment requests found</p>
+                      <Button className="bg-gradient-to-r from-orange-500 to-gray-400 hover:from-orange-600 hover:to-gray-500">
+                        Create Your First Request
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {requests.map((request) => (
+                        <div key={request.id} className="border rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-start gap-3">
+                              <div className="mt-1">
+                                {getRequestTypeIcon(request.request_type)}
+                              </div>
+                              <div>
+                                <h4 className="font-semibold">{request.title}</h4>
+                                <p className="text-sm text-gray-600 mb-1">{request.description}</p>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <span>{getRequestTypeLabel(request.request_type)}</span>
+                                  <span>•</span>
+                                  <span>{request.company.name}</span>
+                                  <span>•</span>
+                                  <span>{request.fee_display}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <Badge className={getStatusColor(request.status)}>
-                            {request.status.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-sm">
-                          <div className="text-gray-600">
-                            <span>Submitted: {new Date(request.submitted_at).toLocaleDateString()}</span>
-                            {request.processed_at && (
-                              <span className="ml-4">
-                                Processed: {new Date(request.processed_at).toLocaleDateString()}
-                              </span>
-                            )}
-                            {request.completed_at && (
-                              <span className="ml-4">
-                                Completed: {new Date(request.completed_at).toLocaleDateString()}
-                              </span>
-                            )}
+                            <Badge className={getStatusColor(request.status)}>
+                              {request.status.replace('_', ' ').toUpperCase()}
+                            </Badge>
                           </div>
                           
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm">View Details</Button>
-                            {request.status === 'pending' && (
-                              <Button variant="outline" size="sm">Edit</Button>
-                            )}
-                            {request.status === 'completed' && request.request_type === 'noc_letter' && (
-                              <Button variant="outline" size="sm">Download NOC</Button>
-                            )}
+                          <div className="flex justify-between items-center text-sm">
+                            <div className="text-gray-600">
+                              <span>Submitted: {new Date(request.submitted_at).toLocaleDateString()}</span>
+                              {request.processed_at && (
+                                <span className="ml-4">
+                                  Processed: {new Date(request.processed_at).toLocaleDateString()}
+                                </span>
+                              )}
+                              {request.completed_at && (
+                                <span className="ml-4">
+                                  Completed: {new Date(request.completed_at).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm">View Details</Button>
+                              {request.status === 'pending' && (
+                                <Button variant="outline" size="sm">Edit</Button>
+                              )}
+                              {request.status === 'completed' && request.request_type === 'noc_letter' && (
+                                <Button variant="outline" size="sm">Download NOC</Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

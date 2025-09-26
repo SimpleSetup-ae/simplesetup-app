@@ -42,6 +42,6 @@ export function PageAuthCheck() {
 }
 
 function isProtectedRoute(pathname: string): boolean {
-  const protectedRoutes = ['/dashboard', '/companies', '/documents', '/billing', '/settings', '/users', '/visas', '/requests', '/accounting']
+  const protectedRoutes = ['/companies', '/documents', '/billing', '/settings', '/users', '/visas', '/requests', '/accounting']
   return protectedRoutes.some(route => pathname.startsWith(route))
 }

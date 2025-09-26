@@ -3,12 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/components/auth/auth-provider'
 import { 
   Building2, 
-  LayoutDashboard, 
   Plane, 
   Calculator, 
   Users, 
@@ -38,11 +36,6 @@ interface SidebarProps {
 
 // Regular user menu items
 const regularMenuItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard
-  },
   {
     title: 'My Company', 
     href: '/companies',
@@ -78,11 +71,6 @@ const regularMenuItems = [
 // Admin menu items
 const adminMenuItems = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard
-  },
-  {
     title: 'Applications',
     href: '/admin/applications',
     icon: FileText
@@ -104,21 +92,6 @@ const adminMenuItems = [
   }
 ]
 
-// Mock companies data - in production this would come from API
-const companies = [
-  {
-    id: '1',
-    name: 'Sample Tech Solutions LLC',
-    free_zone: 'IFZA',
-    status: 'in_progress'
-  },
-  {
-    id: '2', 
-    name: 'Digital Marketing Co.',
-    free_zone: 'DIFC',
-    status: 'completed'
-  }
-]
 
 export default function Sidebar({ className }: SidebarProps) {
   const pathname = usePathname()
@@ -131,7 +104,7 @@ export default function Sidebar({ className }: SidebarProps) {
     <div className={`flex flex-col h-full bg-white border-r ${className}`}>
       {/* Logo */}
       <div className="p-6">
-        <Link href="/dashboard" className="flex items-center space-x-2">
+        <Link href={user?.isAdmin ? '/admin/applications' : '/companies'} className="flex items-center space-x-2">
           <div className="text-2xl font-lora font-bold text-orange-500">
             SimpleSetup.ae
           </div>
@@ -165,45 +138,8 @@ export default function Sidebar({ className }: SidebarProps) {
 
       <Separator className="mx-4" />
 
-      {/* Bottom Section - Company Selector and Logout (locked at bottom) */}
+      {/* Bottom Section - Logout (locked at bottom) */}
       <div className="mt-auto">
-        {/* Company Selector - Text directly on background */}
-        <div className="px-4 mb-6">
-          <div 
-            className="relative rounded-xl p-4"
-            style={{
-              backgroundImage: `url('/images/orange-gradient-bg.svg')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
-            }}
-          >
-            {/* Very light wash effect */}
-            <div className="absolute inset-0 bg-white/15 rounded-xl"></div>
-            
-            {/* Content directly on background */}
-            <div className="relative z-10">
-              <Select defaultValue="1">
-                <SelectTrigger className="w-full bg-transparent border-white/40 text-gray-800 hover:border-white/60 transition-all backdrop-blur-sm">
-                  <SelectValue placeholder="Select company" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      <div className="flex flex-col py-1">
-                        <span className="font-medium text-gray-900">{company.name}</span>
-                        <span className="text-xs text-gray-600">
-                          {company.free_zone} • {company.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-
         {/* Logout Button */}
         <div className="p-4">
           <LogoutButton />

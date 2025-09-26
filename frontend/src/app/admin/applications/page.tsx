@@ -24,6 +24,7 @@ interface Application {
   packageType?: string
   estimatedAnnualTurnover?: number
   completionPercentage: number
+  applicationReference?: string
 }
 
 interface DetailedApplication extends Application {
@@ -960,31 +961,33 @@ export default function AdminApplicationsPage() {
                                       )}
                                     </div>
                                     
-                                    <div className="flex gap-2 pt-4 border-t">
-                                      <Button 
-                                        size="sm" 
-                                        onClick={() => handleStatusUpdate(selectedApplication.id, 'under_review')}
-                                        disabled={selectedApplication.status === 'under_review'}
-                                      >
-                                        Mark Under Review
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handleStatusUpdate(selectedApplication.id, 'approved')}
-                                        disabled={selectedApplication.status === 'approved'}
-                                      >
-                                        Approve
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="destructive"
-                                        onClick={() => handleStatusUpdate(selectedApplication.id, 'rejected')}
-                                        disabled={selectedApplication.status === 'rejected'}
-                                      >
-                                        Reject
-                                      </Button>
-                                    </div>
+                                    {selectedApplication && (
+                                      <div className="flex gap-2 pt-4 border-t">
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleStatusUpdate(selectedApplication.id, 'under_review')}
+                                          disabled={selectedApplication.status === 'under_review'}
+                                        >
+                                          Mark Under Review
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleStatusUpdate(selectedApplication.id, 'approved')}
+                                          disabled={selectedApplication.status === 'approved'}
+                                        >
+                                          Approve
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          onClick={() => handleStatusUpdate(selectedApplication.id, 'rejected')}
+                                          disabled={selectedApplication.status === 'rejected'}
+                                        >
+                                          Reject
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : selectedApplication && (
                                   <div className="text-center py-8">

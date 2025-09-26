@@ -339,10 +339,10 @@ class Api::V1::CompaniesController < ApplicationController
                         serialize_workflow_instance(company.current_workflow) : nil,
       
       # Company Details for Owner Dashboard
-      company_website: company.metadata.dig('website') || form_data.dig('company_website'),
+      company_website: company.contact_website || company.metadata.dig('website') || form_data.dig('company_website'),
       operating_name_arabic: company.metadata.dig('operating_name_arabic') || form_data.dig('operating_name_arabic'),
       legal_framework: freezone&.name || company.free_zone,
-      company_phone: primary_shareholder.dig('mobile') || primary_shareholder.dig('phone'),
+      company_phone: company.contact_phone || primary_shareholder.dig('mobile') || primary_shareholder.dig('phone'),
       visa_eligibility: form_data.dig('visa_count') || 0,
       
       # Tax Registration
@@ -351,11 +351,49 @@ class Api::V1::CompaniesController < ApplicationController
       trn_days_remaining: trn_days_remaining,
       trn_deadline_status: trn_days_remaining == 0 ? 'overdue' : (trn_days_remaining <= 30 ? 'warning' : 'normal'),
       
-      # License Information
-      license_type: "#{company.free_zone} Freezone License",
-      license_issue_date: company.metadata.dig('license_issue_date'),
-      license_expiry_date: company.metadata.dig('license_expiry_date'),
-      first_license_issue_date: company.metadata.dig('first_license_issue_date'),
+      # License Details
+      license_details: {
+        trade_license_number: company.trade_license_number,
+        licensee: company.licensee,
+        operating_name: company.operating_name,
+        legal_status: company.legal_status,
+        first_issue_date: company.first_issue_date&.iso8601,
+        current_issue_date: company.current_issue_date&.iso8601,
+        expiry_date: company.license_expiry_date&.iso8601,
+        business_unit_section: company.business_unit_section
+      },
+      
+      # General Manager
+      general_manager: {
+        name: company.general_manager_name
+      },
+      
+      # Address
+      address: {
+        premises_no: company.premises_no,
+        floor: company.floor,
+        building: company.building,
+        business_unit_address_block: company.business_unit_address_block,
+        area: company.area
+      },
+      
+      # Activities
+      activities: company.business_activities || [],
+      
+      # Reference Code
+      reference_code: company.reference_code,
+      
+      # Contact Footer
+      contact_footer: {
+        phone: company.contact_phone,
+        website: company.contact_website
+      },
+      
+      # Legacy License Information (for backward compatibility)
+      license_type: company.license_type || "#{company.free_zone} Freezone License",
+      license_issue_date: company.current_issue_date || company.metadata.dig('license_issue_date'),
+      license_expiry_date: company.license_expiry_date || company.metadata.dig('license_expiry_date'),
+      first_license_issue_date: company.first_issue_date || company.metadata.dig('first_license_issue_date'),
       establishment_card_number: company.metadata.dig('establishment_card_number'),
       establishment_card_issue_date: company.metadata.dig('establishment_card_issue_date'),
       establishment_card_expiry_date: company.metadata.dig('establishment_card_expiry_date'),
@@ -364,7 +402,7 @@ class Api::V1::CompaniesController < ApplicationController
       documents: {
         trade_license: trade_license_doc ? DocumentSerializer.serialize(trade_license_doc, include_urls: true) : nil,
         certificate_of_incorporation: moa_doc ? DocumentSerializer.serialize(moa_doc, include_urls: true) : nil,
-        register_of_directors: aoa_doc ? DocumentSerializer.serialize(aoa_doc, include_urls: true) : nil
+        moa: aoa_doc ? DocumentSerializer.serialize(aoa_doc, include_urls: true) : nil
       }
     })
   end

@@ -13,9 +13,9 @@ export default function SuccessPage({ params }: { params: { id: string } }) {
     // Clear any saved application data from localStorage
     localStorage.removeItem('current_application_id')
     
-    // Redirect to dashboard after 10 seconds
+    // Redirect to companies page after 10 seconds
     const timer = setTimeout(() => {
-      router.push('/dashboard')
+      router.push('/companies')
     }, 10000)
     
     return () => clearTimeout(timer)
@@ -136,10 +136,10 @@ export default function SuccessPage({ params }: { params: { id: string } }) {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
             size="lg"
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/companies')}
             className="bg-gradient-to-r from-orange-500 to-gray-400 hover:from-orange-600 hover:to-gray-500"
           >
-            Go to Dashboard
+            View My Company
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
           <Button 

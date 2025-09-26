@@ -28,7 +28,11 @@ interface PassportUploadProps {
   personId: string
   onExtractedData: (data: Partial<PassportData>) => void
   onError: (error: string) => void
+  onProcessingStart?: () => void
+  onProcessingEnd?: () => void
   disabled?: boolean
+  existingData?: Partial<PassportData> // Pre-populated passport data
+  showUploadedState?: boolean // Show as already uploaded
 }
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'completed' | 'error'
@@ -38,13 +42,17 @@ export function PassportUpload({
   personId, 
   onExtractedData, 
   onError,
-  disabled = false 
+  onProcessingStart,
+  onProcessingEnd,
+  disabled = false,
+  existingData,
+  showUploadedState = false
 }: PassportUploadProps) {
-  const [state, setState] = useState<UploadState>('idle')
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const [state, setState] = useState<UploadState>(showUploadedState ? 'completed' : 'idle')
+  const [uploadProgress, setUploadProgress] = useState(showUploadedState ? 100 : 0)
   const [processingProgress, setProcessingProgress] = useState(0)
-  const [fileName, setFileName] = useState<string>('')
-  const [confidence, setConfidence] = useState<number>(0)
+  const [fileName, setFileName] = useState<string>(showUploadedState ? 'passport.jpg' : '')
+  const [confidence, setConfidence] = useState<number>(showUploadedState ? 100 : 0)
   const [thumbnailUrl, setThumbnailUrl] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -104,6 +112,9 @@ export function PassportUpload({
     setUploadProgress(0)
     setProcessingProgress(0)
 
+    // Notify parent that processing started (including upload + AI)
+    onProcessingStart?.()
+
     // Generate thumbnail
     const thumbnail = await generateThumbnail(file)
     setThumbnailUrl(thumbnail)
@@ -112,6 +123,7 @@ export function PassportUpload({
       await uploadAndExtract(file)
     } catch (error) {
       setState('error')
+      onProcessingEnd?.() // End processing on upload error
       onError(error instanceof Error ? error.message : 'Upload failed')
     }
   }
@@ -125,11 +137,11 @@ export function PassportUpload({
     const xhr = new XMLHttpRequest()
 
     return new Promise<void>((resolve, reject) => {
-      // Track upload progress
+      // Track upload progress (0-35%)
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100)
-          setUploadProgress(progress)
+          const uploadPercent = (event.loaded / event.total) * 35 // Upload is 35% of total
+          setUploadProgress(Math.round(uploadPercent))
         }
       })
 
@@ -137,10 +149,10 @@ export function PassportUpload({
       xhr.addEventListener('load', () => {
         if (xhr.status === 200) {
           setState('processing')
-          setUploadProgress(100)
+          setUploadProgress(35) // Upload complete, now start AI processing
           
-          // Simulate processing progress (since we can't track AI processing)
-          simulateProcessingProgress()
+          // Start AI extraction progress simulation (35% to 100%)
+          simulateAIExtractionProgress()
           
           try {
             const response = JSON.parse(xhr.responseText)
@@ -150,15 +162,18 @@ export function PassportUpload({
             reject(new Error('Failed to parse response'))
           }
         } else {
+          onProcessingEnd?.() // End processing on error
           reject(new Error(`Upload failed: ${xhr.statusText}`))
         }
       })
 
       xhr.addEventListener('error', () => {
+        onProcessingEnd?.() // End processing on error
         reject(new Error('Network error during upload'))
       })
 
       xhr.addEventListener('timeout', () => {
+        onProcessingEnd?.() // End processing on timeout
         reject(new Error('Upload timeout'))
       })
 
@@ -170,23 +185,32 @@ export function PassportUpload({
     })
   }
 
-  const simulateProcessingProgress = () => {
-    let progress = 0
+  const simulateAIExtractionProgress = () => {
+    let currentProgress = 35 // Start from upload completion
     const interval = setInterval(() => {
-      progress += Math.random() * 15 + 5 // Increment by 5-20%
-      if (progress >= 95) {
-        progress = 95 // Stop at 95% until we get the actual response
+      // Simulate AI processing steps with realistic timing
+      const increment = Math.random() * 8 + 3 // Increment by 3-11%
+      currentProgress += increment
+      
+      if (currentProgress >= 95) {
+        currentProgress = 95 // Stop at 95% until we get the actual response
         clearInterval(interval)
       }
-      setProcessingProgress(Math.min(progress, 95))
-    }, 200)
+      
+      setUploadProgress(Math.min(currentProgress, 95))
+    }, 400) // Slower intervals for AI processing feel
 
-    // Cleanup interval after 30 seconds max
-    setTimeout(() => clearInterval(interval), 30000)
+    // Cleanup interval after 45 seconds max (AI processing can take longer)
+    setTimeout(() => clearInterval(interval), 45000)
+    
+    return interval
   }
 
   const handleExtractionResponse = (response: any) => {
-    setProcessingProgress(100)
+    setUploadProgress(100) // AI extraction complete
+    
+    // Notify parent that processing ended
+    onProcessingEnd?.()
     
     if (response.success && response.extracted) {
       setState('completed')
@@ -217,6 +241,7 @@ export function PassportUpload({
       }
     } else {
       setState('error')
+      onProcessingEnd?.() // End processing on extraction failure
       onError(response.message || 'Failed to extract passport information')
     }
   }
@@ -251,9 +276,9 @@ export function PassportUpload({
   const getStatusText = () => {
     switch (state) {
       case 'uploading':
-        return `Uploading ${fileName}... ${uploadProgress}%`
+        return `Uploading... ${uploadProgress}%`
       case 'processing':
-        return `Processing with GPT-5... ${Math.round(processingProgress)}%`
+        return `Processing... ${uploadProgress}%`
       case 'completed':
         return `Extraction completed (${confidence}% confidence)`
       case 'error':
@@ -261,6 +286,57 @@ export function PassportUpload({
       default:
         return 'Upload passport for AI extraction'
     }
+  }
+
+  // If showing uploaded state (existing person data), show completed view
+  if (showUploadedState && existingData) {
+    return (
+      <div className="space-y-4">
+        <div className="border-2 border-green-200 bg-green-50 rounded-lg p-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span className="ml-2 text-sm font-medium text-green-800">
+                Passport data already available
+              </span>
+            </div>
+            
+            {/* Show extracted data summary */}
+            <div className="mt-4 space-y-2 text-sm text-gray-700">
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div>
+                  <span className="font-medium">Name:</span> {existingData.first_name} {existingData.last_name}
+                </div>
+                <div>
+                  <span className="font-medium">Passport:</span> {existingData.passport_number || 'N/A'}
+                </div>
+                <div>
+                  <span className="font-medium">Nationality:</span> {existingData.nationality || 'N/A'}
+                </div>
+                <div>
+                  <span className="font-medium">DOB:</span> {existingData.date_of_birth || 'N/A'}
+                </div>
+              </div>
+            </div>
+            
+            {/* Option to re-upload */}
+            <Button
+              onClick={() => {
+                setState('idle')
+                setUploadProgress(0)
+                setConfidence(0)
+                setThumbnailUrl('')
+              }}
+              variant="outline"
+              size="sm"
+              className="mt-4"
+            >
+              Upload Different Passport
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -294,25 +370,15 @@ export function PassportUpload({
 
           {(state === 'uploading' || state === 'processing') && (
             <div className="space-y-3 mt-4">
-              {state === 'uploading' && (
-                <div>
-                  <div className="flex justify-between text-xs text-gray-600 mb-1">
-                    <span>Uploading...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <Progress value={uploadProgress} className="h-2" />
+              <div>
+                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                  <span>
+                    {uploadProgress < 35 ? 'Uploading...' : 'Processing...'}
+                  </span>
+                  <span>{uploadProgress}%</span>
                 </div>
-              )}
-
-              {state === 'processing' && (
-                <div>
-                  <div className="flex justify-between text-xs text-gray-600 mb-1">
-                    <span>AI Processing with GPT-5...</span>
-                    <span>{Math.round(processingProgress)}%</span>
-                  </div>
-                  <Progress value={processingProgress} className="h-2" />
-                </div>
-              )}
+                <Progress value={uploadProgress} className="h-3" />
+              </div>
             </div>
           )}
 

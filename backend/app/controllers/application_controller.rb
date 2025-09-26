@@ -7,6 +7,9 @@ class ApplicationController < ActionController::API
   protected
   
   def authenticate_user!
+    Rails.logger.info "authenticate_user!: user_signed_in? = #{user_signed_in?}"
+    Rails.logger.info "authenticate_user!: current_user = #{current_user.inspect}"
+    
     unless user_signed_in?
       render json: { error: 'Authentication required' }, status: :unauthorized
     end

@@ -1,5 +1,6 @@
 class Api::V1::BusinessActivitiesController < Api::V1::BaseController
   skip_before_action :authenticate_user!, only: [:search, :index, :show, :filters]
+  skip_jwt_auth :search, :index, :show, :filters
   before_action :set_business_activity, only: [:show]
 
   # GET /api/v1/business_activities

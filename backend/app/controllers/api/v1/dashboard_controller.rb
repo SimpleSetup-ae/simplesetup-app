@@ -2,7 +2,7 @@ class Api::V1::DashboardController < ApplicationController
   def show
     # Get user's owned companies (Company Owner role)
     owned_companies = current_user.owned_companies
-                                  .includes(:shareholders, :directors, :documents, :tax_registrations)
+                                  .includes(:owner, :shareholders, :directors, :documents, :tax_registrations)
                                   .order(created_at: :desc)
     
     # If user has no companies, return empty dashboard
@@ -90,15 +90,32 @@ class Api::V1::DashboardController < ApplicationController
       license_renewal_days = (company.license_expiry_date - Date.current).to_i
     end
     
+    # Get the first choice company name from name_options or fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
+    # Generate application reference number (external_ref format)
+    application_reference = company.reference_code || company.id.split('-').first.upcase
+    
+    # Enhance company name display for draft applications
+    display_name = if company.name == 'Draft Application' && first_choice_name && first_choice_name != 'Draft Application'
+                     first_choice_name
+                   else
+                     company.name
+                   end
+    
     {
       id: company.id,
-      name: company.name,
+      name: display_name,
       trade_name: company.trade_name,
       free_zone: company.free_zone,
       status: company.status,
       license_number: company.license_number,
       license_status: company.license_status,
       formation_progress: company.formation_progress,
+      
+      # Application information
+      name_options: company.name_options || [],
+      application_reference: application_reference,
       
       # License and renewal information
       license_type: company.license_type,
@@ -107,10 +124,48 @@ class Api::V1::DashboardController < ApplicationController
       establishment_card_number: company.establishment_card_number,
       establishment_card_expiry_date: company.establishment_card_expiry_date&.iso8601,
       
-      # Contact information
-      official_email: company.official_email,
-      phone: company.phone,
-      website: company.website,
+      # Contact information - Use owner's contact details as they submitted the application
+      official_email: company.owner&.email,
+      phone: company.owner&.phone_number || company.contact_phone,
+      website: company.contact_website,
+      
+      # New license details structure
+      license_details: {
+        trade_license_number: company.trade_license_number,
+        licensee: company.licensee,
+        operating_name: company.operating_name,
+        legal_status: company.legal_status,
+        first_issue_date: company.first_issue_date&.iso8601,
+        current_issue_date: company.current_issue_date&.iso8601,
+        expiry_date: company.license_expiry_date&.iso8601,
+        business_unit_section: company.business_unit_section
+      },
+      
+      # General manager
+      general_manager: {
+        name: company.general_manager_name
+      },
+      
+      # Address
+      address: {
+        premises_no: company.premises_no,
+        floor: company.floor,
+        building: company.building,
+        business_unit_address_block: company.business_unit_address_block,
+        area: company.area
+      },
+      
+      # Activities
+      activities: company.business_activities || [],
+      
+      # Reference code
+      reference_code: company.reference_code,
+      
+      # Contact footer
+      contact_footer: {
+        phone: company.contact_phone,
+        website: company.contact_website
+      },
       
       # People
       shareholders: shareholders,
@@ -200,11 +255,12 @@ class Api::V1::DashboardController < ApplicationController
       end
       
       # Tax registration deadline notifications
-      if company.needs_tax_registration?
-        days_until_deadline = company.days_until_tax_deadline
+      if company.respond_to?(:needs_tax_registration?) && company.needs_tax_registration?
+        days_until_deadline = company.respond_to?(:days_until_tax_deadline) ? company.days_until_tax_deadline : nil
         
         if days_until_deadline && days_until_deadline <= 60
-          urgency = case company.tax_deadline_status
+          tax_deadline_status = company.respond_to?(:tax_deadline_status) ? company.tax_deadline_status : 'warning'
+          urgency = case tax_deadline_status
                    when 'overdue' then 'critical'
                    when 'urgent' then 'high'
                    when 'warning' then 'medium'

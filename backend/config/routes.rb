@@ -15,7 +15,7 @@ Rails.application.routes.draw do
       # Authentication
       get '/auth/me', to: 'auth#me'
       post '/auth/sign_in', to: 'auth#login'
-      delete '/auth/sign_out', to: 'auth#sign_out'
+      delete '/auth/sign_out', to: 'auth#logout'
       
       # Dashboard
       get '/dashboard', to: 'dashboard#show'
@@ -30,6 +30,15 @@ Rails.application.routes.draw do
       post '/auth/verify_otp', to: 'otp#verify_otp'
       post '/auth/resend_otp', to: 'otp#resend_otp'
       
+      resources :inline_registrations, only: [:create] do
+        collection do
+          post :verify_email
+          post :update_phone
+          post :resend_otp
+          post :skip_phone
+        end
+      end
+
       # Applications (New Sign-up Flow)
       resources :applications do
         member do
@@ -139,6 +148,27 @@ Rails.application.routes.draw do
       # Requests
       resources :requests
       
+      # Visa Applications
+      resources :visa_applications
+      
+      # Company Memberships (Team Members)
+      resources :company_memberships do
+        member do
+          post :invite
+          post :accept
+          post :reject
+        end
+      end
+      
+      # Tax Registrations
+      resources :tax_registrations do
+        member do
+          post :apply
+          post :approve
+          post :reject
+        end
+      end
+      
       # Business Activities
       resources :business_activities, only: [:index, :show] do
         collection do
@@ -146,6 +176,7 @@ Rails.application.routes.draw do
           get :filters
         end
       end
+      resources :countries, only: [:index]
       
       # Form Configurations
       resources :form_configs, param: :freezone, only: [:show] do

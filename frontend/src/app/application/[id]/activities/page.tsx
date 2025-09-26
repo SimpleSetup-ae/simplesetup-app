@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useApplication } from '@/contexts/ApplicationContext'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { StandardFormLayout } from '@/components/application/StandardFormLayout'
+import { FormSection } from '@/components/application/FormSection'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,9 +12,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { PricingBanner } from '@/components/application/PricingBanner'
-import { Search, ArrowLeft, ArrowRight, Info, Star, Check, X } from 'lucide-react'
-import debounce from 'lodash.debounce'
+import { Search, Info, Star, Check, X, ChevronRight } from 'lucide-react'
+import { apiGet } from '@/lib/api'
+import { BUSINESS_ACTIVITIES_FREE_COUNT, BUSINESS_ACTIVITIES_MAX_COUNT } from '@/lib/constants'
+import { Badge as UiBadge } from '@/components/ui/badge'
+import { Input as UiInput } from '@/components/ui/input'
 
 interface BusinessActivity {
   id: string
@@ -31,6 +34,7 @@ interface BusinessActivity {
 interface SelectedActivity {
   activity_id: string
   activity_name: string
+  activity_code?: string
   is_main: boolean
   is_free: boolean
 }
@@ -46,48 +50,96 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
     applicationData.business_activities || []
   )
   const [mainActivityId, setMainActivityId] = useState(applicationData.main_activity_id || '')
-  const [requestCustom, setRequestCustom] = useState(applicationData.request_custom_activity || false)
+  const [requestCustom, setRequestCustom] = useState(applicationData.request_custom_activity ?? false)
   const [customDescription, setCustomDescription] = useState(applicationData.custom_activity_description || '')
-  const [countriesOfOperation, setCountriesOfOperation] = useState<string[]>(
-    applicationData.countries_of_operation || ['UAE']
-  )
-  const [operateAsFranchise, setOperateAsFranchise] = useState(applicationData.operate_as_franchise || false)
-  const [franchiseDetails, setFranchiseDetails] = useState(applicationData.franchise_details || '')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [acceptRules, setAcceptRules] = useState(applicationData.accept_activity_rules || false)
   const [errors, setErrors] = useState<string[]>([])
+  const [countries, setCountries] = useState<string[]>(applicationData.countries_of_operation || ['United Arab Emirates'])
+  const [countryQuery, setCountryQuery] = useState('')
+  const [countrySuggestions, setCountrySuggestions] = useState<Array<{ code: string | null; name: string; continent?: string }>>([])
+  const [loadingCountries, setLoadingCountries] = useState(false)
+ 
+  // Auto-save whenever selection or related fields change
+  useEffect(() => {
+    if (!applicationData?.id) return
+    updateApplication({
+      business_activities: selectedActivities,
+      main_activity_id: mainActivityId,
+      request_custom_activity: requestCustom,
+      custom_activity_description: customDescription,
+      accept_activity_rules: acceptRules,
+      countries_of_operation: countries
+    }, 'activities')
+  }, [selectedActivities, mainActivityId, requestCustom, customDescription, acceptRules, countries])
   
-  // Debounced search function
-  const searchActivities = useCallback(
-    debounce(async (query: string) => {
-      if (query.length < 2) {
-        setSearchResults([])
-        return
-      }
-      
-      setSearching(true)
+  // Load country suggestions with debounce
+  useEffect(() => {
+    const q = countryQuery.trim()
+    if (q.length === 0) {
+      setCountrySuggestions([])
+      return
+    }
+    const t = setTimeout(async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/v1/business_activities/search?q=${encodeURIComponent(query)}&freezone=IFZA`)
-        const data = await response.json()
-        
-        if (data.success) {
-          // Mark first 3 as free if not already selected
-          const results = data.data.map((activity: BusinessActivity, index: number) => ({
-            ...activity,
-            is_free: selectedActivities.length + index < 3
-          }))
-          setSearchResults(results)
+        setLoadingCountries(true)
+        const res = await apiGet(`/countries?q=${encodeURIComponent(q)}&include_continents=true&limit=8`)
+        const data = await res.json()
+        if (data && Array.isArray(data.data)) {
+          setCountrySuggestions(data.data)
+        } else {
+          setCountrySuggestions([])
         }
-      } catch (err) {
-        console.error('Search error:', err)
+      } catch (e) {
+        setCountrySuggestions([])
       } finally {
-        setSearching(false)
+        setLoadingCountries(false)
       }
-    }, 300),
-    [selectedActivities.length]
-  )
+    }, 250)
+    return () => clearTimeout(t)
+  }, [countryQuery])
+
+  const addCountry = (name: string) => {
+    if (!name) return
+    if (countries.includes(name)) return
+    setCountries(prev => [...prev, name])
+    setCountryQuery('')
+    setCountrySuggestions([])
+  }
+
+  // Debounced search function
+  const searchActivities = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([])
+      return
+    }
+    setSearching(true)
+    try {
+      const response = await apiGet(`/business_activities/search?q=${encodeURIComponent(query)}&freezone=IFZA`)
+      const data = await response.json()
+      if (data.success && Array.isArray(data.data)) {
+        const normalized: BusinessActivity[] = data.data.map((activity: any) => ({
+          ...activity,
+          id: String(activity.id)
+        }))
+        const filteredResults = normalized.filter((activity: BusinessActivity) => 
+          !selectedActivities.some(selected => selected.activity_id === activity.id)
+        )
+        setSearchResults(filteredResults)
+      } else {
+        setSearchResults([])
+      }
+    } catch (err) {
+      console.error('Search error:', err)
+      setSearchResults([])
+    } finally {
+      setSearching(false)
+    }
+  }, [selectedActivities])
   
   useEffect(() => {
-    searchActivities(searchTerm)
+    const t = setTimeout(() => searchActivities(searchTerm), 300)
+    return () => clearTimeout(t)
   }, [searchTerm, searchActivities])
   
   useEffect(() => {
@@ -95,57 +147,48 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
   }, [])
   
   const handleAddActivity = (activity: BusinessActivity) => {
-    if (selectedActivities.length >= 10) {
-      setErrors(['Maximum 10 activities allowed'])
-      return
-    }
-    
-    // Check if already selected
-    if (selectedActivities.find(a => a.activity_id === activity.id)) {
-      setErrors(['This activity is already selected'])
+    if (selectedActivities.length >= BUSINESS_ACTIVITIES_MAX_COUNT) {
+      setErrors([`Maximum ${BUSINESS_ACTIVITIES_MAX_COUNT} activities allowed`])
       return
     }
     
     const newActivity: SelectedActivity = {
-      activity_id: activity.id,
+      activity_id: String(activity.id),
       activity_name: activity.activity_name,
-      is_main: selectedActivities.length === 0, // First one is main by default
-      is_free: selectedActivities.length < 3 // First 3 are free
+      activity_code: activity.activity_code,
+      is_main: selectedActivities.length === 0,
+      is_free: selectedActivities.length < BUSINESS_ACTIVITIES_FREE_COUNT
     }
     
-    const updated = [...selectedActivities, newActivity]
-    setSelectedActivities(updated)
+    setSelectedActivities([...selectedActivities, newActivity])
     
-    // Set as main if it's the first one
-    if (updated.length === 1) {
-      setMainActivityId(activity.id)
+    if (selectedActivities.length === 0) {
+      setMainActivityId(String(activity.id))
     }
     
-    // Clear search
-    setSearchTerm('')
-    setSearchResults([])
     setErrors([])
   }
   
   const handleRemoveActivity = (activityId: string) => {
-    const updated = selectedActivities.filter(a => a.activity_id !== activityId)
-    setSelectedActivities(updated)
+    const updatedActivities = selectedActivities.filter(a => a.activity_id !== activityId)
+    setSelectedActivities(updatedActivities)
     
-    // If removed was main, set first as main
-    if (mainActivityId === activityId && updated.length > 0) {
-      setMainActivityId(updated[0].activity_id)
-      updated[0].is_main = true
+    // If we removed the main activity, make the first remaining one main
+    if (activityId === mainActivityId && updatedActivities.length > 0) {
+      const newMain = updatedActivities[0]
+      newMain.is_main = true
+      setMainActivityId(newMain.activity_id)
+      setSelectedActivities([...updatedActivities])
     }
   }
   
   const handleSetMain = (activityId: string) => {
+    const updatedActivities = selectedActivities.map(activity => ({
+      ...activity,
+      is_main: activity.activity_id === activityId
+    }))
+    setSelectedActivities(updatedActivities)
     setMainActivityId(activityId)
-    setSelectedActivities(prev => 
-      prev.map(a => ({
-        ...a,
-        is_main: a.activity_id === activityId
-      }))
-    )
   }
   
   const validateAndContinue = async () => {
@@ -155,20 +198,16 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
       validationErrors.push('Please select at least one business activity')
     }
     
-    if (!mainActivityId && selectedActivities.length > 0) {
-      validationErrors.push('Please select a main activity')
-    }
-    
-    if (requestCustom && !customDescription) {
-      validationErrors.push('Please describe your custom activity')
-    }
-    
-    if (operateAsFranchise && !franchiseDetails) {
-      validationErrors.push('Please provide franchise details')
+    if (!mainActivityId) {
+      validationErrors.push('Please select a main business activity')
     }
     
     if (!acceptRules) {
-      validationErrors.push('Please accept the activity rules and regulations')
+      validationErrors.push('Please accept the business activity rules and regulations')
+    }
+    
+    if (requestCustom && !customDescription.trim()) {
+      validationErrors.push('Please describe your custom activity request')
     }
     
     if (validationErrors.length > 0) {
@@ -182,9 +221,6 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
       main_activity_id: mainActivityId,
       request_custom_activity: requestCustom,
       custom_activity_description: customDescription,
-      countries_of_operation: countriesOfOperation,
-      operate_as_franchise: operateAsFranchise,
-      franchise_details: franchiseDetails,
       accept_activity_rules: acceptRules
     }, 'activities')
     
@@ -194,329 +230,435 @@ export default function BusinessActivitiesPage({ params }: { params: { id: strin
   const handleBack = () => {
     router.push(`/application/${params.id}/license`)
   }
+
+  const handleExportCSV = async () => {
+    try {
+      // Fetch all activities from the API
+      const response = await apiGet('/business_activities?freezone=IFZA')
+      const data = await response.json()
+      
+      if (data.success && Array.isArray(data.data)) {
+        // Convert to CSV format
+        const csvHeaders = ['Activity Code', 'Activity Name', 'Activity Description', 'Type', 'Regulation Type']
+        const csvRows = data.data.map((activity: BusinessActivity) => [
+          activity.activity_code || '',
+          activity.activity_name || '',
+          activity.activity_description || '',
+          activity.activity_type || '',
+          activity.regulation_type || ''
+        ])
+        
+        // Create CSV content
+        const csvContent = [
+          csvHeaders.join(','),
+          ...csvRows.map(row => row.map(field => `"${field.replace(/"/g, '""')}"`).join(','))
+        ].join('\n')
+        
+        // Create and download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        const url = URL.createObjectURL(blob)
+        link.setAttribute('href', url)
+        link.setAttribute('download', `IFZA_Business_Activities_${new Date().toISOString().split('T')[0]}.csv`)
+        link.style.visibility = 'hidden'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      }
+    } catch (err) {
+      console.error('Export error:', err)
+      setErrors(['Failed to export activities. Please try again.'])
+    }
+  }
   
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Business Activities</CardTitle>
-                <CardDescription>
-                  Select your business activities. The first 3 activities are free, additional activities incur fees.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Search */}
-                <div className="space-y-2">
-                  <Label htmlFor="search">Search Activities</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="search"
-                      placeholder="Search by name, description, or code..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  {/* Search Results */}
-                  {searchResults.length > 0 && (
-                    <div className="border rounded-lg max-h-60 overflow-y-auto">
-                      {searchResults.map((activity) => (
-                        <div
-                          key={activity.id}
-                          className="p-3 border-b hover:bg-gray-50 cursor-pointer"
-                          onClick={() => handleAddActivity(activity)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium">{activity.activity_name}</div>
-                              <div className="text-sm text-gray-500">{activity.activity_description}</div>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="secondary" className="text-xs">
-                                  {activity.activity_type}
-                                </Badge>
-                                {activity.regulation_type === 'Regulated' && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    Regulated
-                                  </Badge>
-                                )}
-                                {selectedActivities.length < 3 && (
-                                  <Badge variant="default" className="text-xs bg-green-500">
-                                    Free
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <Button size="sm" variant="ghost">
-                              Add
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {searching && (
-                    <div className="text-center py-4 text-gray-500">
-                      Searching activities...
-                    </div>
-                  )}
-                </div>
+    <StandardFormLayout
+      title="Business Activities"
+      subtitle="Select your business activities. The first 3 activities are free, additional activities incur fees."
+      onBack={handleBack}
+      onContinue={validateAndContinue}
+      errors={errors}
+    >
+      {/* Search Section */}
+      <FormSection
+        title="Search Business Activities"
+        description="Find and add your business activities. First 3 are free!"
+        headerActions={
+          <div className="flex gap-2">
+            <Button 
+              asChild
+              variant="outline" 
+              size="sm"
+              className="text-brand-600 border-brand-300 hover:bg-brand-50"
+            >
+              <a href="/business-activities" target="_blank" rel="noopener noreferrer">View All Activities</a>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleExportCSV}
+              className="text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              Export to CSV
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              placeholder="Search by name, description, or activity code (e.g., 'software', 'trading', '4741004')..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 py-3 text-lg border-2 focus:border-brand-500"
+            />
+          </div>
+          
+          {/* Popular Searches */}
+          {searchTerm.length === 0 && (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">Popular searches:</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  'Software', 'Trading', 'Consultancy', 'Marketing', 
+                  'Real Estate', 'IT Services', 'E-commerce', 'Import Export'
+                ].map((suggestion) => (
+                  <Button
+                    key={suggestion}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSearchTerm(suggestion)}
+                    className="text-sm"
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              <p className="text-sm text-gray-600 font-medium">Found {searchResults.length} activities:</p>
+              {searchResults.map((activity) => {
+                const isSelected = selectedActivities.some(a => a.activity_id === activity.id)
+                const willBeFree = selectedActivities.length < BUSINESS_ACTIVITIES_FREE_COUNT && !isSelected
                 
-                {/* Activity Counter & Pricing Info */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-semibold text-blue-900">Business Activities Summary</h3>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open('/business-activities', '_blank')}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                    >
-                      Research Activities
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Included Activities:</span>
-                      <span className="ml-2 font-semibold text-green-600">{Math.min(selectedActivities.length, 3)}/3 Free</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Additional Activities:</span>
-                      <span className="ml-2 font-semibold text-orange-600">
-                        {Math.max(0, selectedActivities.length - 3)} × AED 1,000
-                      </span>
-                    </div>
-                  </div>
-                  {selectedActivities.length > 3 && (
-                    <div className="mt-2 pt-2 border-t border-blue-200">
-                      <span className="text-sm text-gray-600">Additional Cost: </span>
-                      <span className="font-bold text-orange-600">
-                        AED {((selectedActivities.length - 3) * 1000).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Business Activity Slots */}
-                <div className="space-y-2">
-                  <Label>Business Activities (Maximum 10)</Label>
-                  <div className="space-y-3">
-                    {/* Render 3 skeleton slots */}
-                    {[0, 1, 2].map((slotIndex) => {
-                      const activity = selectedActivities[slotIndex];
-                      return (
-                        <div
-                          key={`slot-${slotIndex}`}
-                          className={`border-2 rounded-lg p-4 ${
-                            activity 
-                              ? activity.is_main 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-green-500 bg-green-50'
-                              : 'border-dashed border-gray-300 bg-gray-50'
-                          }`}
-                        >
-                          {activity ? (
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{activity.activity_name}</span>
-                                  {activity.is_main && (
-                                    <Badge className="bg-blue-500">Main Activity</Badge>
-                                  )}
-                                  <Badge variant="default" className="bg-green-500">Free</Badge>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                {!activity.is_main && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleSetMain(activity.activity_id)}
-                                  >
-                                    Set as Main
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRemoveActivity(activity.activity_id)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-4">
-                              <div className="text-gray-500 mb-2">
-                                {slotIndex === 0 ? 'Main Business Activity' : `Business Activity ${slotIndex + 1}`}
-                              </div>
-                              <div className="text-sm text-green-600 font-medium">Free Slot</div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                Search and select an activity above
-                              </div>
-                            </div>
+                return (
+                  <div
+                    key={activity.id}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                      isSelected 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-brand-300'
+                    }`}
+                    onClick={() => isSelected ? handleRemoveActivity(String(activity.id)) : handleAddActivity(activity)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h4 className="font-lora text-lg font-medium text-gray-900">
+                            {activity.activity_name}
+                          </h4>
+                          {!willBeFree && !isSelected && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300">
+                              AED 1,000
+                            </Badge>
                           )}
                         </div>
-                      );
-                    })}
-                    
-                    {/* Additional paid activities */}
-                    {selectedActivities.slice(3).map((activity, index) => (
-                      <div
-                        key={activity.activity_id}
-                        className="border-2 border-orange-500 bg-orange-50 rounded-lg p-4"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{activity.activity_name}</span>
-                              <Badge variant="destructive" className="bg-orange-500">
-                                AED 1,000
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            {!activity.is_main && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSetMain(activity.activity_id)}
-                              >
-                                Set as Main
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleRemoveActivity(activity.activity_id)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="secondary" className="text-xs">
+                            Code: {activity.activity_code}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {activity.activity_type}
+                          </Badge>
+                          {activity.regulation_type === 'Regulated' && (
+                            <Badge variant="destructive" className="text-xs">
+                              Regulated
+                            </Badge>
+                          )}
                         </div>
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                          {activity.activity_description}
+                        </p>
                       </div>
-                    ))}
+                      <div className="ml-4">
+                        {isSelected ? (
+                          <Button size="sm" variant="outline" className="text-green-600 border-green-300">
+                            <Check className="h-4 w-4 mr-1" />
+                            Added
+                          </Button>
+                        ) : (
+                          <Button size="sm" className="bg-brand hover:bg-brand-600">
+                            Add Activity
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  
-                  {selectedActivities.length < 3 && (
-                    <Alert>
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        <strong>Tip:</strong> The first 3 activities are free. We recommend selecting at least 3 activities to maximize your license value.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
-                
-                {/* Custom Activity Request */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="custom"
-                      checked={requestCustom}
-                      onCheckedChange={(checked) => setRequestCustom(checked as boolean)}
-                    />
-                    <Label htmlFor="custom">Request a custom activity not listed above</Label>
-                  </div>
-                  
-                  {requestCustom && (
-                    <Textarea
-                      placeholder="Describe your custom business activity..."
-                      value={customDescription}
-                      onChange={(e) => setCustomDescription(e.target.value)}
-                      className="mt-2"
-                      rows={3}
-                    />
-                  )}
-                </div>
-                
-                {/* Countries of Operation */}
-                <div className="space-y-2">
-                  <Label>Countries of Operation</Label>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="uae"
-                      checked={countriesOfOperation.includes('UAE')}
-                      disabled
-                    />
-                    <Label htmlFor="uae">United Arab Emirates (Required)</Label>
-                  </div>
-                </div>
-                
-                {/* Franchise */}
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="franchise"
-                      checked={operateAsFranchise}
-                      onCheckedChange={(checked) => setOperateAsFranchise(checked as boolean)}
-                    />
-                    <Label htmlFor="franchise">Will you operate as a franchise?</Label>
-                  </div>
-                  
-                  {operateAsFranchise && (
-                    <Textarea
-                      placeholder="Provide franchise details..."
-                      value={franchiseDetails}
-                      onChange={(e) => setFranchiseDetails(e.target.value)}
-                      className="mt-2"
-                      rows={2}
-                    />
-                  )}
-                </div>
-                
-                {/* Accept Rules */}
+                )
+              })}
+            </div>
+          )}
+          
+          {searching && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500 mx-auto mb-2"></div>
+              <p className="text-gray-500">Searching activities...</p>
+            </div>
+          )}
+          
+          {searchTerm.length >= 2 && searchResults.length === 0 && !searching && (
+            <div className="text-center py-8 text-gray-500">
+              <p>No activities found for "{searchTerm}"</p>
+              <p className="text-sm mt-1">Try different keywords or browse popular activities above</p>
+            </div>
+          )}
+          
+          {/* Advanced Options */}
+          <div className="pt-4 border-t border-gray-200">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                const newAdvancedState = !showAdvanced
+                setShowAdvanced(newAdvancedState)
+                // Reset custom activity request when closing advanced options
+                if (!newAdvancedState) {
+                  setRequestCustom(false)
+                  setCustomDescription('')
+                }
+              }}
+              className="text-gray-600 hover:text-gray-900 flex items-center"
+            >
+              <ChevronRight 
+                className={`h-4 w-4 mr-1 transition-transform ${
+                  showAdvanced ? 'rotate-90' : ''
+                }`} 
+              />
+              {showAdvanced ? 'Hide Advanced' : 'Advanced Options'}
+            </Button>
+            
+            {showAdvanced && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-3">
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="accept"
-                    checked={acceptRules}
-                    onCheckedChange={(checked) => setAcceptRules(checked as boolean)}
+                    id="custom"
+                    checked={requestCustom}
+                    onCheckedChange={(checked) => setRequestCustom(checked as boolean)}
                   />
-                  <Label htmlFor="accept" className="text-sm">
-                    I understand and accept the rules and regulations for the selected business activities
+                  <Label htmlFor="custom" className="text-sm">
+                    Request a custom activity not listed above
                   </Label>
                 </div>
                 
-                {/* Errors */}
-                {errors.length > 0 && (
-                  <Alert variant="destructive">
-                    <AlertDescription>
-                      <ul className="list-disc pl-4">
-                        {errors.map((error, index) => (
-                          <li key={index}>{error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
+                {requestCustom && (
+                  <Textarea
+                    placeholder="Describe the custom activity you need..."
+                    value={customDescription}
+                    onChange={(e) => setCustomDescription(e.target.value)}
+                    className="mt-2"
+                    rows={3}
+                  />
                 )}
-                
-                {/* Navigation */}
-                <div className="flex justify-between pt-4">
-                  <Button variant="outline" onClick={handleBack}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <Button onClick={validateAndContinue}>
-                    Continue
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Pricing Banner */}
-          <div className="lg:col-span-1">
-            <PricingBanner />
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    </div>
+      </FormSection>
+      
+      {/* Selected Activities */}
+      {selectedActivities.length > 0 && (
+        <FormSection
+          title="Your Selected Activities"
+          description={`${selectedActivities.length} ${selectedActivities.length === 1 ? 'activity' : 'activities'} selected • ${Math.min(selectedActivities.length, BUSINESS_ACTIVITIES_FREE_COUNT)} free, ${Math.max(0, selectedActivities.length - BUSINESS_ACTIVITIES_FREE_COUNT)} paid`}
+        >
+          <div className="space-y-3">
+            {selectedActivities.map((activity, index) => {
+              const isFree = index < BUSINESS_ACTIVITIES_FREE_COUNT
+              const isMain = activity.is_main
+              
+              return (
+                <div
+                  key={activity.activity_id}
+                  className={`p-4 rounded-lg border-2 ${
+                    isMain 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-lora text-lg font-medium text-gray-900">
+                          {activity.activity_name}
+                        </h4>
+                        {isMain && (
+                          <Badge className="bg-blue-500 text-white">MAIN ACTIVITY</Badge>
+                        )}
+                        {isFree && !isMain && (
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-300">FREE</Badge>
+                        )}
+                        {!isFree && (
+                          <Badge variant="outline" className="text-orange-600 border-orange-300">AED 1,000</Badge>
+                        )}
+                      </div>
+                      <div className="mb-2">
+                        {activity.activity_code && (
+                          <Badge variant="secondary" className="text-xs">
+                            Code: {activity.activity_code}
+                          </Badge>
+                        )}
+                      </div>
+                      {!isMain && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSetMain(activity.activity_id)}
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                        >
+                          <Star className="h-4 w-4 mr-1" />
+                          Set as Main Activity
+                        </Button>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleRemoveActivity(activity.activity_id)}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+            
+            {/* Pricing Summary */}
+            {selectedActivities.length > BUSINESS_ACTIVITIES_FREE_COUNT && (
+              <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-orange-900">Additional Activities Cost:</span>
+                  <span className="font-bold text-orange-900 text-lg">
+                    AED {((selectedActivities.length - BUSINESS_ACTIVITIES_FREE_COUNT) * 1000).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </FormSection>
+      )}
+      
+      {/* Countries of Operating Business */}
+      <FormSection
+        title="Countries of Operating Business"
+        description="Select the countries where your company will operate. UAE is preselected."
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {countries.map((c) => (
+              <UiBadge key={c} variant="secondary" className="flex items-center gap-1">
+                {c}
+                <button
+                  type="button"
+                  onClick={() => setCountries(prev => prev.filter(x => x !== c))}
+                  className="ml-1 text-gray-600 hover:text-gray-900"
+                  aria-label={`Remove ${c}`}
+                >
+                  ×
+                </button>
+              </UiBadge>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 items-start max-w-md">
+            <UiInput
+              placeholder="Type to search countries or continents"
+              value={countryQuery}
+              onChange={(e) => setCountryQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (countrySuggestions.length > 0) {
+                    addCountry(countrySuggestions[0].name)
+                  }
+                }
+              }}
+            />
+            {countryQuery && (
+              <div className="w-full border rounded-md bg-white shadow-sm max-h-64 overflow-y-auto">
+                {loadingCountries && (
+                  <div className="p-2 text-sm text-gray-500">Loading...</div>
+                )}
+                {!loadingCountries && countrySuggestions.length === 0 && (
+                  <div className="p-2 text-sm text-gray-500">No matches</div>
+                )}
+                {countrySuggestions.map((opt) => (
+                  <button
+                    key={`${opt.code || 'continent'}-${opt.name}`}
+                    type="button"
+                    onClick={() => addCountry(opt.name)}
+                    className="w-full text-left p-2 hover:bg-gray-50 text-sm"
+                  >
+                    {opt.name}
+                    {opt.continent && opt.code && (
+                      <span className="ml-2 text-gray-500">({opt.code})</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </FormSection>
+      
+      {/* Getting Started Hint */}
+      {selectedActivities.length === 0 && searchTerm.length === 0 && (
+        <FormSection
+          title="Getting Started"
+          description="Need help choosing activities? Here are some tips:"
+        >
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="font-lora text-lg font-medium text-blue-900 mb-2">💡 Tips for Choosing Activities</h4>
+              <ul className="space-y-2 text-blue-800 text-sm">
+                <li>• <strong>Start with your main business:</strong> What's your primary source of income?</li>
+                <li>• <strong>Think broadly:</strong> Include related services you might offer</li>
+                <li>• <strong>Consider the future:</strong> Activities you might expand into</li>
+                <li>• <strong>First 3 are free:</strong> Take advantage of the included activities</li>
+              </ul>
+            </div>
+            
+          </div>
+        </FormSection>
+      )}
+
+      {/* Final Confirmation */}
+      {selectedActivities.length > 0 && (
+        <FormSection
+          title="Final Confirmation"
+          description="Please confirm you understand the business activity requirements"
+        >
+          <div className="space-y-6">
+            
+            {/* Accept Rules */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="accept"
+                checked={acceptRules}
+                onCheckedChange={(checked) => setAcceptRules(checked as boolean)}
+              />
+              <Label htmlFor="accept" className="text-sm">
+                I understand and accept the rules and regulations for the selected business activities
+              </Label>
+            </div>
+          </div>
+        </FormSection>
+      )}
+    </StandardFormLayout>
   )
 }

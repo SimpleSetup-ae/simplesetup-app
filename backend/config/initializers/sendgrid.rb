@@ -1,5 +1,6 @@
 # SendGrid configuration for ActionMailer
-if Rails.env.production? || Rails.env.development?
+# Only use SendGrid if explicitly enabled or in production
+if Rails.env.production? || ENV['ENABLE_SENDGRID'] == 'true'
   ActionMailer::Base.smtp_settings = {
     user_name: 'apikey',
     password: ENV['SENDGRID_API_KEY'],

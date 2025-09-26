@@ -82,42 +82,42 @@ export default function HomePage() {
                     email: 'owner@sampletech.com',
                     description: 'Full access to all features, company management, financial data',
                     color: 'bg-purple-100 text-purple-800 border-purple-200',
-                    href: '/dashboard?user=owner'
+                    href: '/companies'
                   },
                   {
                     role: 'Admin',
                     email: 'admin@sampletech.com', 
                     description: 'Manage workflows, documents, users. Limited financial access',
                     color: 'bg-blue-100 text-blue-800 border-blue-200',
-                    href: '/dashboard?user=admin'
+                    href: '/admin/applications'
                   },
                   {
                     role: 'Accountant',
                     email: 'accountant@sampletech.com',
                     description: 'Tax registrations, financial reports, payment history access',
                     color: 'bg-green-100 text-green-800 border-green-200', 
-                    href: '/dashboard?user=accountant'
+                    href: '/accounting'
                   },
                   {
                     role: 'Viewer',
                     email: 'viewer@sampletech.com',
                     description: 'Read-only access to company info, documents, progress',
                     color: 'bg-gray-100 text-gray-800 border-gray-200',
-                    href: '/dashboard?user=viewer'
+                    href: '/companies'
                   },
                   {
                     role: 'CSP Admin',
                     email: 'csp@simplesetup.ae',
                     description: 'Review applications, approve requests, manage all companies',
                     color: 'bg-orange-100 text-orange-800 border-orange-200',
-                    href: '/dashboard?user=csp_admin'
+                    href: '/admin/applications'
                   },
                   {
                     role: 'Super Admin',
                     email: 'superadmin@simplesetup.ae',
                     description: 'System administration, user management, platform settings',
                     color: 'bg-red-100 text-red-800 border-red-200',
-                    href: '/dashboard?user=super_admin'
+                    href: '/admin/users'
                   }
                 ].map((userType) => (
                   <Card key={userType.role} className={`transition-all hover:shadow-md border ${userType.color}`}>
@@ -144,9 +144,9 @@ export default function HomePage() {
                   Each test account shows different UI elements and permissions based on the user role.
                 </p>
                 <Button asChild variant="outline" className="gap-2">
-                  <Link href="/dashboard">
+                  <Link href="/companies">
                     <Building2 className="h-4 w-4" />
-                    Access Full Demo Dashboard
+                    Access My Company
                   </Link>
                 </Button>
               </div>

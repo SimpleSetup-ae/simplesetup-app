@@ -53,9 +53,10 @@ async function apiCall(endpoint: string, options: RequestInit = {}): Promise<any
 }
 
 export async function signIn(email: string, password: string): Promise<User> {
+  const normalizedEmail = email.trim().toLowerCase()
   const data = await apiCall('/auth/sign_in', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: normalizedEmail, password }),
   })
 
   if (!data.success) {

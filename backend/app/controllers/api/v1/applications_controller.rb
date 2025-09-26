@@ -1,7 +1,17 @@
 class Api::V1::ApplicationsController < Api::V1::BaseController
+  # Authentication configuration:
+  # - Anonymous actions: create, show, update (for draft applications)
+  # - JWT actions: claim, submit (during inline registration)
+  # - Devise actions: index (user dashboard), admin_* (admin panel)
   skip_before_action :authenticate_user!, only: [:create, :show, :update, :progress, :submit, :claim]
+  skip_before_action :authenticate_from_jwt_token!, only: [:create, :show, :update, :progress, :submit, :claim]
+  
+  # Admin endpoints use Devise session authentication exclusively
+  skip_jwt_auth :admin_index, :admin_show, :admin_update
+  
+  # Admin endpoints require Devise session authentication + admin privileges
+  before_action :authenticate_admin!, only: [:admin_index, :admin_show, :admin_update]
   before_action :set_company, except: [:create, :index, :admin_index]
-  before_action :require_admin, only: [:admin_index, :admin_show, :admin_update]
   
   # GET /api/v1/applications (for logged-in users)
   def index
@@ -161,7 +171,7 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   def admin_index
     @companies = Company.admin_viewable
                         .includes(:owner, :application_progress, :documents)
-                        .order(submitted_at: :desc)
+                        .order(Arel.sql("COALESCE(submitted_at, created_at) DESC"))
     
     # Apply filters
     @companies = @companies.where(status: params[:status]) if params[:status].present?
@@ -242,8 +252,9 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
     
     # For authenticated users, ensure they have access
+    # Admins can access any company, regular users only their own
     if @company && current_user && !@company.anonymous_draft?
-      unless @company.can_be_accessed_by?(current_user)
+      unless current_user.is_admin? || @company.can_be_accessed_by?(current_user)
         render json: { error: 'Unauthorized' }, status: :forbidden
         return
       end
@@ -255,9 +266,25 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     end
   end
   
-  def require_admin
-    unless current_user&.is_admin?
-      render json: { error: 'Admin access required' }, status: :forbidden
+  # Authenticate admin users using Devise session
+  # Ensures user is logged in via Devise and has admin privileges
+  def authenticate_admin!
+    # First check if user is authenticated via Devise session
+    unless current_user
+      render json: { 
+        error: 'Authentication required',
+        message: 'Please sign in to access admin features'
+      }, status: :unauthorized
+      return
+    end
+    
+    # Then verify admin privileges
+    unless current_user.is_admin?
+      render json: { 
+        error: 'Admin access required',
+        message: 'You do not have permission to access this resource'
+      }, status: :forbidden
+      return
     end
   end
   
@@ -286,16 +313,32 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   # validation logic moved to CompanySubmissionValidator
   
   def serialize_application(company)
+    # Get the first choice company name from name_options or fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
+    # Generate application reference number (external_ref format)
+    application_reference = company.reference_code || company.id.split('-').first.upcase
+    
+    # Enhance company name display for draft applications
+    display_name = if company.name == 'Draft Application' && first_choice_name && first_choice_name != 'Draft Application'
+                     "#{first_choice_name} (#{application_reference})"
+                   elsif company.name == 'Draft Application'
+                     "Draft Application (#{application_reference})"
+                   else
+                     first_choice_name
+                   end
+    
     {
       id: company.id,
-      name: company.name,
+      name: display_name,
       status: company.status,
       free_zone: company.free_zone,
       formation_step: company.formation_step,
       submitted_at: company.submitted_at,
       progress: company.application_progress&.percent || 0,
       current_step: company.application_progress&.step || 0,
-      has_unsaved_changes: company.has_unsaved_changes?
+      has_unsaved_changes: company.has_unsaved_changes?,
+      application_reference: application_reference
     }
   end
   
@@ -358,15 +401,27 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     # Get the first choice company name from name_options or fall back to company.name
     first_choice_name = company.name_options&.first || company.name
     
+    # Generate application reference number (external_ref format)
+    application_reference = company.reference_code || company.id.split('-').first.upcase
+    
+    # Enhance company name display for draft applications
+    display_name = if company.name == 'Draft Application' && first_choice_name && first_choice_name != 'Draft Application'
+                     "#{first_choice_name} (#{application_reference})"
+                   elsif company.name == 'Draft Application'
+                     "Draft Application (#{application_reference})"
+                   else
+                     first_choice_name
+                   end
+    
     {
       id: company.id,
-      companyName: first_choice_name,
+      companyName: display_name,
       freeZone: company.free_zone,
       status: company.status,
       submittedAt: (company.submitted_at || company.created_at)&.iso8601,
       userEmail: company.owner&.email,
       userFullName: company.owner&.full_name,
-      isAnonymous: company.anonymous_draft?,
+      isAnonymous: company.owner_id.nil?,
       packageType: determine_package_type(company),
       estimatedAnnualTurnover: company.estimated_annual_turnover,
       completionPercentage: company.application_progress&.percent || 0,
@@ -374,7 +429,8 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       documentCount: company.documents.count,
       lastActivity: company.application_progress&.last_activity_at&.iso8601,
       createdAt: company.created_at.iso8601,
-      updatedAt: company.updated_at.iso8601
+      updatedAt: company.updated_at.iso8601,
+      applicationReference: application_reference
     }
   end
   

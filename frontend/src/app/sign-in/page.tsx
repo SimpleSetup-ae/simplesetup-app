@@ -18,7 +18,7 @@ export default function SignInPage() {
   const [error, setError] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/dashboard'
+  const redirect = searchParams.get('redirect') || '/companies'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,8 +26,17 @@ export default function SignInPage() {
     setError('')
 
     try {
-      await signIn(email, password)
-      router.push(redirect)
+      const user = await signIn(email, password)
+      
+      // Force a complete page reload to ensure new session cookie is used
+      // This prevents the circular session persistence issue
+      if (searchParams.get('redirect')) {
+        window.location.replace(redirect)
+      } else {
+        // Otherwise, redirect based on user role
+        const defaultPath = user.isAdmin ? '/admin/applications' : '/companies'
+        window.location.replace(defaultPath)
+      }
     } catch (err: any) {
       setError(err.message || 'Sign in failed')
     } finally {

@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const isProtectedRoute = (pathname: string) => {
-    const protectedRoutes = ['/dashboard', '/companies', '/documents', '/billing', '/settings', '/users']
+    const protectedRoutes = ['/companies', '/documents', '/billing', '/settings', '/users']
     return protectedRoutes.some(route => pathname.startsWith(route))
   }
 

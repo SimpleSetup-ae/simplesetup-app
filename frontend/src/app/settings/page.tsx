@@ -150,52 +150,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Company Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Company Preferences
-            </CardTitle>
-            <CardDescription>
-              Default settings for new company formations
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="default_free_zone">Default Free Zone</Label>
-                <select 
-                  id="default_free_zone" 
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  defaultValue="IFZA"
-                >
-                  <option value="IFZA">IFZA - International Free Zone Authority</option>
-                  <option value="DIFC">DIFC - Dubai International Financial Centre</option>
-                  <option value="ADGM">ADGM - Abu Dhabi Global Market</option>
-                </select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="default_currency">Default Currency</Label>
-                <select 
-                  id="default_currency" 
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  defaultValue="AED"
-                >
-                  <option value="AED">AED - UAE Dirham</option>
-                  <option value="USD">USD - US Dollar</option>
-                </select>
-              </div>
-            </div>
-            
-            <Separator />
-            
-            <div className="flex justify-end">
-              <Button>Save Preferences</Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Company Settings removed per request */}
       </div>
     </DashboardLayout>
   )

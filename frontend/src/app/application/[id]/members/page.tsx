@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PricingBanner } from '@/components/application/PricingBanner'
 import { PassportUpload } from '@/components/application/PassportUpload'
 import { 
@@ -292,89 +293,156 @@ export default function MembersPage({ params }: { params: { id: string } }) {
                   personId={person.id}
                   onExtractedData={(data) => handleExtractedData(person.id, data, type)}
                   onError={(error) => setErrors([error])}
+                  onProcessingStart={() => setExtracting(person.id)}
+                  onProcessingEnd={() => setExtracting(null)}
                   disabled={extracting === person.id}
+                  existingData={person}
+                  showUploadedState={!!(person.first_name && person.last_name && person.passport_number)}
                 />
               </div>
             </div>
             
-            {/* Name Fields */}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label htmlFor={`first-${person.id}`}>First Name</Label>
-                <Input
-                  id={`first-${person.id}`}
-                  value={person.first_name || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { first_name: e.target.value }, type)}
-                  className={person.passport_file ? 'bg-green-50' : ''}
-                />
+            {/* Name Fields with AI Processing Overlay */}
+            <div className="relative">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor={`first-${person.id}`}>First Name</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`first-${person.id}`}
+                      value={person.first_name || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { first_name: e.target.value }, type)}
+                      className={person.passport_file ? 'bg-green-50' : ''}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={`middle-${person.id}`}>Middle Name</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`middle-${person.id}`}
+                      value={person.middle_name || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { middle_name: e.target.value }, type)}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={`last-${person.id}`}>Last Name</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`last-${person.id}`}
+                      value={person.last_name || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { last_name: e.target.value }, type)}
+                      className={person.passport_file ? 'bg-green-50' : ''}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor={`middle-${person.id}`}>Middle Name</Label>
-                <Input
-                  id={`middle-${person.id}`}
-                  value={person.middle_name || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { middle_name: e.target.value }, type)}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`last-${person.id}`}>Last Name</Label>
-                <Input
-                  id={`last-${person.id}`}
-                  value={person.last_name || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { last_name: e.target.value }, type)}
-                  className={person.passport_file ? 'bg-green-50' : ''}
-                />
-              </div>
+              
+              {/* Grey Transparent Overlay During AI Processing */}
+              {extracting === person.id && (
+                <div className="absolute inset-0 bg-gray-500/20 backdrop-blur-[1px] rounded-md flex items-center justify-center">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      Processing...
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
-            {/* Other Details */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor={`gender-${person.id}`}>Gender</Label>
-                <Select
-                  value={person.gender}
-                  onValueChange={(value) => handleUpdatePerson(person.id, { gender: value as 'Male' | 'Female' }, type)}
-                >
-                  <SelectTrigger id={`gender-${person.id}`}>
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Other Details with AI Processing Overlay */}
+            <div className="relative">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor={`gender-${person.id}`}>Gender</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select
+                      value={person.gender}
+                      onValueChange={(value) => handleUpdatePerson(person.id, { gender: value as 'Male' | 'Female' }, type)}
+                      disabled={extracting === person.id}
+                    >
+                      <SelectTrigger id={`gender-${person.id}`}>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={`dob-${person.id}`}>Date of Birth</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`dob-${person.id}`}
+                      type="date"
+                      value={person.date_of_birth || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { date_of_birth: e.target.value }, type)}
+                      className={person.passport_file ? 'bg-green-50' : ''}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
               </div>
-              <div>
-                <Label htmlFor={`dob-${person.id}`}>Date of Birth</Label>
-                <Input
-                  id={`dob-${person.id}`}
-                  type="date"
-                  value={person.date_of_birth || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { date_of_birth: e.target.value }, type)}
-                  className={person.passport_file ? 'bg-green-50' : ''}
-                />
+              
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div>
+                  <Label htmlFor={`nationality-${person.id}`}>Nationality</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`nationality-${person.id}`}
+                      value={person.nationality || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { nationality: e.target.value }, type)}
+                      className={person.passport_file ? 'bg-green-50' : ''}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={`passport-${person.id}`}>Passport Number</Label>
+                  {extracting === person.id ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Input
+                      id={`passport-${person.id}`}
+                      value={person.passport_number || ''}
+                      onChange={(e) => handleUpdatePerson(person.id, { passport_number: e.target.value }, type)}
+                      className={person.passport_file ? 'bg-green-50' : ''}
+                      disabled={extracting === person.id}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor={`nationality-${person.id}`}>Nationality</Label>
-                <Input
-                  id={`nationality-${person.id}`}
-                  value={person.nationality || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { nationality: e.target.value }, type)}
-                  className={person.passport_file ? 'bg-green-50' : ''}
-                />
-              </div>
-              <div>
-                <Label htmlFor={`passport-${person.id}`}>Passport Number</Label>
-                <Input
-                  id={`passport-${person.id}`}
-                  value={person.passport_number || ''}
-                  onChange={(e) => handleUpdatePerson(person.id, { passport_number: e.target.value }, type)}
-                  className={person.passport_file ? 'bg-green-50' : ''}
-                />
-              </div>
+              
+              {/* Grey Transparent Overlay During AI Processing */}
+              {extracting === person.id && (
+                <div className="absolute inset-0 bg-gray-500/20 backdrop-blur-[1px] rounded-md flex items-center justify-center">
+                  <div className="bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      Processing...
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Share percentage for shareholders */}
