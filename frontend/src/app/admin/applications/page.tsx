@@ -24,6 +24,7 @@ interface Application {
   packageType?: string
   estimatedAnnualTurnover?: number
   completionPercentage: number
+  applicationReference?: string
 }
 
 interface DetailedApplication extends Application {

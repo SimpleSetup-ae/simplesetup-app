@@ -112,19 +112,4 @@ export interface DashboardData {
   }
 }
 
-// Dashboard API function
-export const fetchDashboardData = async (): Promise<DashboardData> => {
-  const response = await apiGet('/dashboard')
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch dashboard data')
-  }
-  
-  const result = await response.json()
-  
-  if (!result.success) {
-    throw new Error(result.message || 'Failed to fetch dashboard data')
-  }
-  
-  return result.data
-}
+// Note: Dashboard functionality removed - companies page now fetches data directly

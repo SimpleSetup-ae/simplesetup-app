@@ -49,9 +49,12 @@ class Api::V1::Admin::CompaniesController < ApplicationController
   end
   
   def serialize_admin_company(company)
+    # Use the first choice company name from name_options if available, otherwise fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
     {
       id: company.id,
-      name: company.name,
+      name: first_choice_name,
       tradeName: company.trade_name,
       licenseNumber: company.license_number,
       freeZone: company.free_zone,

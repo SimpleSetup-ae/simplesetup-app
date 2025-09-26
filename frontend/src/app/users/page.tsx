@@ -1,44 +1,80 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import DashboardLayout from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Users, UserPlus, Mail, Shield, CheckCircle } from 'lucide-react'
+import { Users, UserPlus, Mail, Shield, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
+import { apiGet } from '@/lib/api'
+
+interface TeamMember {
+  id: string
+  role: string
+  accepted: boolean
+  accepted_at?: string
+  created_at: string
+  user: {
+    id: string
+    email: string
+    full_name: string
+    first_name: string
+    last_name: string
+    last_sign_in_at?: string
+    sign_in_count: number
+    confirmed: boolean
+    locked: boolean
+  }
+  company: {
+    id: string
+    name: string
+  }
+}
+
+interface TeamMembersData {
+  members: TeamMember[]
+  pending_invitations: any[]
+  stats: {
+    total_members: number
+    pending_count: number
+    active_count: number
+  }
+}
 
 export default function UsersPage() {
-  // Mock users data
-  const users = [
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@sampletech.com',
-      role: 'owner',
-      company: 'Sample Tech Solutions LLC',
-      status: 'active',
-      last_login: '2024-01-15T10:00:00Z',
-      avatar: null
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@digitalmarketing.com',
-      role: 'admin',
-      company: 'Digital Marketing Co.',
-      status: 'active',
-      last_login: '2024-01-14T16:30:00Z',
-      avatar: null
-    },
-    {
-      id: '3',
-      name: 'Ahmed Al-Rashid',
-      email: 'ahmed@sampletech.com',
-      role: 'accountant',
-      company: 'Sample Tech Solutions LLC',
-      status: 'invited',
-      last_login: null,
-      avatar: null
+  const [teamData, setTeamData] = useState<TeamMembersData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchTeamMembers()
+  }, [])
+
+  const fetchTeamMembers = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiGet('/company_memberships')
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch team members')
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setTeamData(data.data)
+      } else {
+        throw new Error(data.error || 'Failed to fetch team members')
+      }
+    } catch (err) {
+      console.error('Error fetching team members:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch team members')
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -73,7 +109,9 @@ export default function UsersPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+              <div className="text-2xl font-bold">
+                {teamData?.stats.total_members || 0}
+              </div>
             </CardContent>
           </Card>
 
@@ -84,7 +122,7 @@ export default function UsersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                {users.filter(u => u.status === 'active').length}
+                {teamData?.stats.active_count || 0}
               </div>
             </CardContent>
           </Card>
@@ -96,7 +134,7 @@ export default function UsersPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-600">
-                {users.filter(u => u.status === 'invited').length}
+                {teamData?.stats.pending_count || 0}
               </div>
             </CardContent>
           </Card>
@@ -129,51 +167,91 @@ export default function UsersPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {users.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Avatar>
-                      <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback>
-                        {user.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div>
-                      <h4 className="font-medium">{user.name}</h4>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                      <p className="text-xs text-gray-500">{user.company}</p>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Loading team members...</span>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertTriangle className="h-8 w-8 text-red-500 mb-2" />
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button onClick={fetchTeamMembers} variant="outline">
+                  Try Again
+                </Button>
+              </div>
+            ) : !teamData?.members || teamData.members.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Users className="h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-gray-600 mb-4">No team members found</p>
+                <Button className="bg-gradient-to-r from-orange-500 to-gray-400 hover:from-orange-600 hover:to-gray-500">
+                  Invite Your First Team Member
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {teamData.members.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarFallback>
+                          {member.user.full_name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div>
+                        <h4 className="font-medium">{member.user.full_name}</h4>
+                        <p className="text-sm text-gray-600">{member.user.email}</p>
+                        <p className="text-xs text-gray-500">{member.company.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                          {member.user.confirmed ? (
+                            <span className="text-green-600">✓ Confirmed</span>
+                          ) : (
+                            <span className="text-orange-600">Unconfirmed</span>
+                          )}
+                          {member.user.locked && (
+                            <span className="text-red-600">• Locked</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <Badge className={getRoleColor(user.role)}>
-                        {user.role.toUpperCase()}
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <Badge className={getRoleColor(member.role)}>
+                          {member.role.toUpperCase()}
+                        </Badge>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {member.user.last_sign_in_at ? 
+                            `Last login: ${new Date(member.user.last_sign_in_at).toLocaleDateString()}` :
+                            'Never logged in'
+                          }
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {member.user.sign_in_count} logins
+                        </p>
+                      </div>
+                      
+                      <Badge className={member.accepted ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                        {member.accepted ? 'ACTIVE' : 'PENDING'}
                       </Badge>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {user.last_login ? 
-                          `Last login: ${new Date(user.last_login).toLocaleDateString()}` :
-                          'Never logged in'
-                        }
-                      </p>
-                    </div>
-                    
-                    <Badge className={getStatusColor(user.status)}>
-                      {user.status.toUpperCase()}
-                    </Badge>
-                    
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">Edit</Button>
-                      {user.status === 'invited' && (
-                        <Button variant="outline" size="sm">Resend Invite</Button>
-                      )}
+                      
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">Edit</Button>
+                        {!member.accepted && (
+                          <Button variant="outline" size="sm">Resend Invite</Button>
+                        )}
+                        {member.role !== 'owner' && (
+                          <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -40,6 +40,10 @@ interface CompanyData {
   license_status?: string
   formation_progress: number
   
+  // Application information
+  name_options?: string[]
+  application_reference?: string
+  
   // License and renewal information
   license_type?: string
   license_expiry_date?: string
@@ -51,6 +55,44 @@ interface CompanyData {
   official_email?: string
   phone?: string
   website?: string
+  
+  // New license details structure
+  license_details?: {
+    trade_license_number?: string
+    licensee?: string
+    operating_name?: string
+    legal_status?: string
+    first_issue_date?: string
+    current_issue_date?: string
+    expiry_date?: string
+    business_unit_section?: string
+  }
+  
+  // General manager
+  general_manager?: {
+    name?: string
+  }
+  
+  // Address
+  address?: {
+    premises_no?: string
+    floor?: string
+    building?: string
+    business_unit_address_block?: string
+    area?: string
+  }
+  
+  // Activities
+  activities?: string[]
+  
+  // Reference code
+  reference_code?: string
+  
+  // Contact footer
+  contact_footer?: {
+    phone?: string
+    website?: string
+  }
   
   // People
   shareholders: PersonData[]
@@ -293,7 +335,7 @@ function CompaniesPageContent() {
           <div className="text-center">
             <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">No Companies Yet</h2>
-            <p className="text-gray-600 mb-6">You don't have any companies registered yet.</p>
+            <p className="text-gray-600 mb-6">You don&#39;t have any companies registered yet.</p>
             <Link href="/application/new">
               <Button className="bg-gradient-to-r from-orange-500 to-gray-400">
                 Start Company Formation
@@ -341,7 +383,12 @@ function CompaniesPageContent() {
               </div>
             </div>
           </div>
-          <CardTitle className="text-xl">{company.name}</CardTitle>
+          <CardTitle className="text-xl">
+            {company.name}
+            {company.application_reference && (
+              <span className="text-sm text-gray-500 ml-2">({company.application_reference})</span>
+            )}
+          </CardTitle>
           <CardDescription>
             <Badge className={getStatusBadgeColor(company.status)}>
               {company.status.replace('_', ' ').toUpperCase()}
@@ -388,7 +435,7 @@ function CompaniesPageContent() {
                 <p className="text-sm text-blue-700 mt-1">
                   Our team is reviewing your application and supporting documents. 
                   You will receive an email notification once the review is complete. 
-                  If additional information is required, we&apos;ll contact you directly.
+                  If additional information is required, we&#39;ll contact you directly.
                 </p>
               </div>
             </div>
@@ -405,9 +452,11 @@ function CompaniesPageContent() {
           <p className="text-gray-600 mb-4">
             If you have questions about your application status, our support team is here to help.
           </p>
-          <Button variant="outline">
-            <Mail className="h-4 w-4 mr-2" />
-            Contact Support
+          <Button variant="outline" asChild>
+            <a href="mailto:help@simplesetup.ae">
+              <Mail className="h-4 w-4 mr-2" />
+              Contact Support
+            </a>
           </Button>
         </CardContent>
       </Card>
@@ -624,7 +673,7 @@ function CompaniesPageContent() {
       )}
 
       {/* License Information */}
-      {(company.license_number || company.license_type) && (
+      {(company.license_details || company.license_number || company.license_type) && (
         <Card>
           <CardHeader>
             <CardTitle>License Information</CardTitle>
@@ -632,14 +681,30 @@ function CompaniesPageContent() {
           <CardContent className="grid md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium text-gray-700">License Number</Label>
-                <p className="font-mono font-semibold">{company.license_number || 'Pending'}</p>
+                <Label className="text-sm font-medium text-gray-700">Trade License Number</Label>
+                <p className="font-mono font-semibold">
+                  {company.license_details?.trade_license_number || company.license_number || 'Not provided'}
+                </p>
               </div>
 
-              {company.license_type && (
+              {company.license_details?.licensee && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">License Type</Label>
-                  <p>{company.license_type}</p>
+                  <Label className="text-sm font-medium text-gray-700">Licensee</Label>
+                  <p className="font-semibold">{company.license_details.licensee}</p>
+                </div>
+              )}
+
+              {company.license_details?.operating_name && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Operating Name</Label>
+                  <p>{company.license_details.operating_name}</p>
+                </div>
+              )}
+
+              {company.license_details?.legal_status && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Legal Status</Label>
+                  <p>{company.license_details.legal_status}</p>
                 </div>
               )}
 
@@ -659,12 +724,32 @@ function CompaniesPageContent() {
             </div>
 
             <div className="space-y-4">
-              {company.license_expiry_date && (
+              {company.license_details?.first_issue_date && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">First Issue Date</Label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span>{new Date(company.license_details.first_issue_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {company.license_details?.current_issue_date && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Current Issue Date</Label>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span>{new Date(company.license_details.current_issue_date).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {(company.license_details?.expiry_date || company.license_expiry_date) && (
                 <div>
                   <Label className="text-sm font-medium text-gray-700">License Expiry Date</Label>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-gray-500" />
-                    <span>{new Date(company.license_expiry_date).toLocaleDateString()}</span>
+                    <span>{new Date(company.license_details?.expiry_date || company.license_expiry_date || '').toLocaleDateString()}</span>
                   </div>
                   {company.license_renewal_days && (
                     <p className="text-sm text-gray-600 mt-1">
@@ -674,6 +759,13 @@ function CompaniesPageContent() {
                       }
                     </p>
                   )}
+                </div>
+              )}
+
+              {company.license_details?.business_unit_section && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Business Unit Section</Label>
+                  <p>{company.license_details.business_unit_section}</p>
                 </div>
               )}
 
@@ -687,6 +779,148 @@ function CompaniesPageContent() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* General Manager */}
+      {company.general_manager?.name && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              General Manager
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Name</Label>
+              <p className="text-lg font-semibold">{company.general_manager.name}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Address */}
+      {company.address && Object.values(company.address).some(value => value) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              Business Address
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              {company.address.premises_no && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Premises No</Label>
+                  <p>{company.address.premises_no}</p>
+                </div>
+              )}
+
+              {company.address.floor && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Floor</Label>
+                  <p>{company.address.floor}</p>
+                </div>
+              )}
+
+              {company.address.building && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Building</Label>
+                  <p>{company.address.building}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {company.address.business_unit_address_block && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Business Unit Address Block</Label>
+                  <p>{company.address.business_unit_address_block}</p>
+                </div>
+              )}
+
+              {company.address.area && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Area</Label>
+                  <p>{company.address.area}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Business Activities */}
+      {company.activities && company.activities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Business Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {company.activities.map((activity, index) => (
+                <Badge key={index} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  {activity}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reference Code */}
+      {company.reference_code && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reference Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label className="text-sm font-medium text-gray-700">Reference Code</Label>
+              <p className="font-mono font-semibold text-lg">{company.reference_code}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Contact Footer */}
+      {company.contact_footer && (company.contact_footer.phone || company.contact_footer.website) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Authority Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-6">
+            {company.contact_footer.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gray-500" />
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Phone</Label>
+                  <p>{company.contact_footer.phone}</p>
+                </div>
+              </div>
+            )}
+
+            {company.contact_footer.website && (
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-gray-500" />
+                <div>
+                  <Label className="text-sm font-medium text-gray-700">Website</Label>
+                  <Link 
+                    href={company.contact_footer.website} 
+                    target="_blank" 
+                    className="text-blue-600 hover:underline"
+                  >
+                    {company.contact_footer.website}
+                  </Link>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

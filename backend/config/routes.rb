@@ -148,6 +148,27 @@ Rails.application.routes.draw do
       # Requests
       resources :requests
       
+      # Visa Applications
+      resources :visa_applications
+      
+      # Company Memberships (Team Members)
+      resources :company_memberships do
+        member do
+          post :invite
+          post :accept
+          post :reject
+        end
+      end
+      
+      # Tax Registrations
+      resources :tax_registrations do
+        member do
+          post :apply
+          post :approve
+          post :reject
+        end
+      end
+      
       # Business Activities
       resources :business_activities, only: [:index, :show] do
         collection do

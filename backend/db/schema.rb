@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_09_24_063000) do
+ActiveRecord::Schema[7.1].define(version: 2025_09_25_170448) do
   create_schema "auth"
   create_schema "extensions"
   create_schema "graphql"
@@ -157,7 +157,25 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_24_063000) do
     t.boolean "ubo_terms_accepted", default: false
     t.boolean "accept_activity_rules", default: false
     t.datetime "last_auto_save_at"
+    t.string "trade_license_number"
+    t.string "licensee"
+    t.string "operating_name"
+    t.string "legal_status"
+    t.date "first_issue_date"
+    t.date "current_issue_date"
+    t.string "business_unit_section"
+    t.string "general_manager_name"
+    t.string "premises_no"
+    t.string "floor"
+    t.string "building"
+    t.string "business_unit_address_block"
+    t.string "area"
+    t.string "business_activities", default: [], array: true
+    t.string "reference_code"
+    t.string "contact_phone"
+    t.string "contact_website"
     t.index ["activity_codes"], name: "index_companies_activity_codes", using: :gin
+    t.index ["business_activities"], name: "index_companies_on_business_activities", using: :gin
     t.index ["countries_of_operation"], name: "index_companies_countries_of_operation", using: :gin
     t.index ["deleted_at"], name: "index_companies_on_deleted_at"
     t.index ["draft_token"], name: "index_companies_on_draft_token", unique: true
@@ -169,11 +187,13 @@ ActiveRecord::Schema[7.1].define(version: 2025_09_24_063000) do
     t.index ["metadata"], name: "index_companies_metadata", using: :gin
     t.index ["name_options"], name: "index_companies_name_options", using: :gin
     t.index ["owner_id"], name: "index_companies_on_owner_id"
+    t.index ["reference_code"], name: "index_companies_on_reference_code"
     t.index ["status", "owner_id"], name: "index_companies_on_status_and_owner"
     t.index ["status", "owner_id"], name: "index_companies_on_status_owner"
     t.index ["status", "submitted_at"], name: "index_companies_on_status_and_submitted"
     t.index ["status", "submitted_at"], name: "index_companies_on_status_submitted"
     t.index ["submitted_at"], name: "index_companies_on_submitted_at"
+    t.index ["trade_license_number"], name: "index_companies_on_trade_license_number"
   end
 
   create_table "company_invitations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

@@ -313,16 +313,32 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
   # validation logic moved to CompanySubmissionValidator
   
   def serialize_application(company)
+    # Get the first choice company name from name_options or fall back to company.name
+    first_choice_name = company.name_options&.first || company.name
+    
+    # Generate application reference number (external_ref format)
+    application_reference = company.reference_code || company.id.split('-').first.upcase
+    
+    # Enhance company name display for draft applications
+    display_name = if company.name == 'Draft Application' && first_choice_name && first_choice_name != 'Draft Application'
+                     "#{first_choice_name} (#{application_reference})"
+                   elsif company.name == 'Draft Application'
+                     "Draft Application (#{application_reference})"
+                   else
+                     first_choice_name
+                   end
+    
     {
       id: company.id,
-      name: company.name,
+      name: display_name,
       status: company.status,
       free_zone: company.free_zone,
       formation_step: company.formation_step,
       submitted_at: company.submitted_at,
       progress: company.application_progress&.percent || 0,
       current_step: company.application_progress&.step || 0,
-      has_unsaved_changes: company.has_unsaved_changes?
+      has_unsaved_changes: company.has_unsaved_changes?,
+      application_reference: application_reference
     }
   end
   
@@ -385,9 +401,21 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
     # Get the first choice company name from name_options or fall back to company.name
     first_choice_name = company.name_options&.first || company.name
     
+    # Generate application reference number (external_ref format)
+    application_reference = company.reference_code || company.id.split('-').first.upcase
+    
+    # Enhance company name display for draft applications
+    display_name = if company.name == 'Draft Application' && first_choice_name && first_choice_name != 'Draft Application'
+                     "#{first_choice_name} (#{application_reference})"
+                   elsif company.name == 'Draft Application'
+                     "Draft Application (#{application_reference})"
+                   else
+                     first_choice_name
+                   end
+    
     {
       id: company.id,
-      companyName: first_choice_name,
+      companyName: display_name,
       freeZone: company.free_zone,
       status: company.status,
       submittedAt: (company.submitted_at || company.created_at)&.iso8601,
@@ -401,7 +429,8 @@ class Api::V1::ApplicationsController < Api::V1::BaseController
       documentCount: company.documents.count,
       lastActivity: company.application_progress&.last_activity_at&.iso8601,
       createdAt: company.created_at.iso8601,
-      updatedAt: company.updated_at.iso8601
+      updatedAt: company.updated_at.iso8601,
+      applicationReference: application_reference
     }
   end
   
