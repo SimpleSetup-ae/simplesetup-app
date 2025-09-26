@@ -51,10 +51,22 @@ class Api::V1::InlineRegistrationsController < Api::V1::BaseController
         Rails.logger.info "🔍 Debug - Rails.env: #{Rails.env}"
         
         OtpMailer.send_otp(user, user.current_otp).deliver_now
-        Rails.logger.info "✅ OTP email sent to #{user.email}: #{user.current_otp}"
+        
+        # Only log OTP in development environment for debugging
+        if Rails.env.development?
+          Rails.logger.info "✅ OTP email sent to #{user.email}: #{user.current_otp}"
+        else
+          Rails.logger.info "✅ OTP email sent to #{user.email}"
+        end
       rescue => e
         Rails.logger.error "❌ Failed to send OTP email: #{e.message}"
-        Rails.logger.info "📧 OTP for #{user.email}: #{user.current_otp} (email failed, check logs)"
+        
+        # Only show OTP in logs for development environment
+        if Rails.env.development?
+          Rails.logger.info "📧 OTP for #{user.email}: #{user.current_otp} (email failed, check logs)"
+        else
+          Rails.logger.info "📧 OTP email failed for #{user.email} - check email service"
+        end
       end
       
       # Generate temporary token for next steps
@@ -213,10 +225,22 @@ class Api::V1::InlineRegistrationsController < Api::V1::BaseController
     # Send OTP email via SendGrid
     begin
       OtpMailer.send_otp(user, user.current_otp).deliver_now
-      Rails.logger.info "✅ New OTP email sent to #{user.email}: #{user.current_otp}"
+      
+      # Only log OTP in development environment for debugging
+      if Rails.env.development?
+        Rails.logger.info "✅ New OTP email sent to #{user.email}: #{user.current_otp}"
+      else
+        Rails.logger.info "✅ New OTP email sent to #{user.email}"
+      end
     rescue => e
       Rails.logger.error "❌ Failed to send OTP email: #{e.message}"
-      Rails.logger.info "📧 New OTP for #{user.email}: #{user.current_otp} (email failed, check logs)"
+      
+      # Only show OTP in logs for development environment
+      if Rails.env.development?
+        Rails.logger.info "📧 New OTP for #{user.email}: #{user.current_otp} (email failed, check logs)"
+      else
+        Rails.logger.info "📧 OTP email failed for #{user.email} - check email service"
+      end
     end
     
     render json: {

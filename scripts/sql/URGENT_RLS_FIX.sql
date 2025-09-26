@@ -1,6 +1,12 @@
--- URGENT: CRITICAL SECURITY FIX - RLS POLICIES FOR CORE TABLES
--- Run this SQL in your Supabase SQL Editor immediately
--- This fixes major security vulnerabilities in your database
+-- ⚠️ DEPRECATED: DO NOT USE THIS FILE - CONTAINS CLERK REFERENCES ⚠️
+-- This file contains incorrect RLS policies that reference Clerk authentication
+-- which is NOT used in this application.
+-- 
+-- ✅ USE INSTEAD: DEVISE_JWT_RLS_FIX.sql
+-- The correct RLS policies for Devise/JWT authentication are in DEVISE_JWT_RLS_FIX.sql
+--
+-- IMPORTANT: This application uses Devise with JWT tokens, NOT Clerk.
+-- The policies below will NOT work and may cause security issues.
 
 -- Enable RLS on all core business tables
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
